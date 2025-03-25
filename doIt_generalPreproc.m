@@ -158,26 +158,24 @@ switch info.dataSetLabel
                 sesDbList{end+1,1}                          = sesDbListTmp{sub}{ses};
                 if ~exist('prcDirList','var');   prcDirList = {}; end
                 prcDirList{end+1,1}                         = fullfile(info.prcDir ,['sub-' subList{end}],['ses-' sesList{end}]);
-                if ~exist('bidsDirList','var'); bidsDirList = {}; end
-                if ~exist('bhvrDir','var');         bhvrDir = {}; end
-                if ~exist('phsDir','var');           phsDir = {}; end
+                if ~exist('dirs','var');               dirs = {}; end
+                if ~exist('dirsOrig','var');       dirsOrig = {}; end
                 disp('Copying data from db')
                 forceThis = 0;
-                [bidsDirList{end+1,1},bhvrDir{end+1,1},phsDir{end+1,1}] = ...
-                    db2bids(sesDbListTmp{sub}{ses},subList{end},sesList{end},info,forceThis);
+                [dirs{end+1,1},dirsOrig{end+1,1}] = db2bids(sesDbListTmp{sub}{ses},subList{end},sesList{end},info,forceThis);
                 [~,acqDate,~] = fileparts(sesDbList{end}); acqDate = strsplit(acqDate,'--'); acqDate = datetime(acqDate{1},'InputFormat','yyyy-MM-dd');
-                % if ~exist(bidsDirList{end,1},'dir'); warning(['Did you forget to copy' newline sesDbList{end,1} newline '(aka the MRI source folder)' newline 'to' newline bidsDirList{end,1} newline '(aka the bids folder)?']); end
+                % if ~exist(dirs{end,1}.bids,'dir'); warning(['Did you forget to copy' newline sesDbList{end,1} newline '(aka the MRI source folder)' newline 'to' newline dirs{end,1}.bids newline '(aka the bids folder)?']); end
 
                 
                 %%% anat
                 disp('--anat--')
-                dir(fullfile(bidsDirList{end,1},'anat','*.nii.gz'))
+                dir(fullfile(dirs{end,1}.bids,'anat','*.nii.gz'))
                 %%%% avMap
                 if ~exist('avMap','var'); avMap = {}; end
-                avMap{end+1,1}.fList = dir(fullfile(bidsDirList{end,1},'anat','*acq-avMap*.nii.gz'));
+                avMap{end+1,1}.fList = dir(fullfile(dirs{end,1}.bids,'anat','*acq-avMap*.nii.gz'));
                 %%%% memprage
                 if ~exist('memprage','var'); memprage = {}; end
-                memprage{end+1,1}.fList = dir(fullfile(bidsDirList{end,1},'anat','*_T1w.nii.gz'));
+                memprage{end+1,1}.fList = dir(fullfile(dirs{end,1}.bids,'anat','*_T1w.nii.gz'));
                 % if ~isempty(memprage{end,1}.fList)
                 %     tmp = dir(fullfile(info.dbDir,subList{end},'*','fs',subList{end}));
                 %     memprage{end,1}.fsDir = tmp(1).folder; clear tmp
@@ -191,29 +189,29 @@ switch info.dataSetLabel
                 % end
                 %%%% pcMRA
                 if ~exist('pcMRA','var'); pcMRA = {}; end
-                pcMRA{end+1,1}.fList = dir(fullfile(bidsDirList{end,1},'anat','*acq-pcVenc*.nii.gz'));
+                pcMRA{end+1,1}.fList = dir(fullfile(dirs{end,1}.bids,'anat','*acq-pcVenc*.nii.gz'));
                 %%%% tof
                 if ~exist('tof','var'); tof = {}; end
-                tof{end+1,1}.fList = dir(fullfile(bidsDirList{end,1},'anat','*acq-tof*.nii.gz'));
+                tof{end+1,1}.fList = dir(fullfile(dirs{end,1}.bids,'anat','*acq-tof*.nii.gz'));
 
 
                 %%% fmap
                 disp('--fmap--')
-                dir(fullfile(bidsDirList{end,1},'fmap','*.nii.gz'))
+                dir(fullfile(dirs{end,1}.bids,'fmap','*.nii.gz'))
                 %%%% topup
                 if ~exist('b0','var'); b0 = {}; end
                 b0{end+1,1}.label = 'topup';
-                b0{end,1}.fList = dir(fullfile(bidsDirList{end,1},'fmap','*_epi.nii.gz'));
+                b0{end,1}.fList = dir(fullfile(dirs{end,1}.bids,'fmap','*_epi.nii.gz'));
                 %%%% sa2rage
                 if ~exist('b1','var'); b1 = {}; end
                 b1{end+1,1}.label = 'B1';
-                b1{end,1}.fList = dir(fullfile(bidsDirList{end,1},'fmap','*_TB1SRGE.nii.gz'));
+                b1{end,1}.fList = dir(fullfile(dirs{end,1}.bids,'fmap','*_TB1SRGE.nii.gz'));
 
 
                 
                 %%% func
                 disp('--func--')
-                dir(fullfile(bidsDirList{end,1},'func','*.nii.gz'))
+                dir(fullfile(dirs{end,1}.bids,'func','*.nii.gz'))
                 
                 if ~exist('rCond','var');     rCond = {}; end
                 rCond{end+1,1}   = {};
@@ -241,12 +239,12 @@ switch info.dataSetLabel
                 % dsgn.cond      = ones(size(dsgn.onsetList));
                 % dsgn.condLabel = {'stim'};
                 % rCond{end,1}{1,end}.dsgn  = dsgn;
-                % fListAcq  = dir(fullfile(bidsDirList{end,1},'func',['*_acq-'  rCond{end,1}{1,end}.acq '*_angio.nii.gz']));
-                % fListTask = dir(fullfile(bidsDirList{end,1},'func',['*_task-' rCond{end,1}{1,end}.task     '_*.nii.gz']));
+                % fListAcq  = dir(fullfile(dirs{end,1}.bids,'func',['*_acq-'  rCond{end,1}{1,end}.acq '*_angio.nii.gz']));
+                % fListTask = dir(fullfile(dirs{end,1}.bids,'func',['*_task-' rCond{end,1}{1,end}.task     '_*.nii.gz']));
                 % fList     = intersect(fullfile({fListAcq.folder },{fListAcq.name })',fullfile({fListTask.folder},{fListTask.name})');
-                % % fListAcq  = dir(fullfile(bidsDirList{end,1},'func',['*_acq-pcVenc7z*_angio.nii.gz']));
-                % % fListRec  = dir(fullfile(bidsDirList{end,1},'func',['*_rec-venc0_*_angio.nii.gz']));
-                % % fListTask = dir(fullfile(bidsDirList{end,1},'func',['*_task-' rCond{end,1}{1,end}.task     '_*.nii.gz']));
+                % % fListAcq  = dir(fullfile(dirs{end,1}.bids,'func',['*_acq-pcVenc7z*_angio.nii.gz']));
+                % % fListRec  = dir(fullfile(dirs{end,1}.bids,'func',['*_rec-venc0_*_angio.nii.gz']));
+                % % fListTask = dir(fullfile(dirs{end,1}.bids,'func',['*_task-' rCond{end,1}{1,end}.task     '_*.nii.gz']));
                 % % fList2     = intersect(fullfile({fListAcq.folder },{fListAcq.name })',fullfile({fListRec.folder },{fListRec.name })');
                 % % fList2     = intersect(fList2,fullfile({fListTask.folder},{fListTask.name})');
                 % % fList = cat(1,fList,fList2);
@@ -273,8 +271,8 @@ switch info.dataSetLabel
                 dsgn.cond      = ones(size(dsgn.onsetList));
                 dsgn.condLabel = {'stim'};
                 rCond{end,1}{1,end}.dsgn  = dsgn;
-                fListTask = dir(fullfile(bidsDirList{end,1},'func',['*_task-' rCond{end,1}{1,end}.task     '_*.nii.gz']));
-                    fListAcq  = dir(fullfile(bidsDirList{end,1},'func',['*_acq-'  rCond{end,1}{1,end}.acq '*_angio.nii.gz']));
+                fListTask = dir(fullfile(dirs{end,1}.bids,'func',['*_task-' rCond{end,1}{1,end}.task     '_*.nii.gz']));
+                    fListAcq  = dir(fullfile(dirs{end,1}.bids,'func',['*_acq-'  rCond{end,1}{1,end}.acq '*_angio.nii.gz']));
                     fList     = intersect(fullfile({fListAcq.folder },{fListAcq.name })',fullfile({fListTask.folder},{fListTask.name})');
                 rCond{end,1}{1,end}.fList = {};
                 if ~isempty(fList); rCond{end,1}{1,end}.fList = fList; end
@@ -300,11 +298,11 @@ switch info.dataSetLabel
                 dsgn.condLabel = {'stim'};
                 rCond{end,1}{1,end}.dsgn  = dsgn;
                 fListAcq        = {};
-                fListAcq{end+1} = dir(fullfile(bidsDirList{end,1},'func',['*_acq-pcVenc7z*_angio.nii.gz'])); fListAcq{end} = fullfile({fListAcq{end}.folder },{fListAcq{end}.name })';
-                fListAcq{end+1} = dir(fullfile(bidsDirList{end,1},'func',['*_acq-pcVenc7ap*_angio.nii.gz'])); fListAcq{end} = fullfile({fListAcq{end}.folder },{fListAcq{end}.name })';
+                fListAcq{end+1} = dir(fullfile(dirs{end,1}.bids,'func',['*_acq-pcVenc7z*_angio.nii.gz'])); fListAcq{end} = fullfile({fListAcq{end}.folder },{fListAcq{end}.name })';
+                fListAcq{end+1} = dir(fullfile(dirs{end,1}.bids,'func',['*_acq-pcVenc7ap*_angio.nii.gz'])); fListAcq{end} = fullfile({fListAcq{end}.folder },{fListAcq{end}.name })';
                 fListAcq        = unique(cat(1,fListAcq{:}));
-                fListRec  = dir(fullfile(bidsDirList{end,1},'func',['*_rec-venc0_*_angio.nii.gz']));
-                fListTask = dir(fullfile(bidsDirList{end,1},'func',['*_task-' rCond{end,1}{1,end}.task     '_*.nii.gz']));
+                fListRec  = dir(fullfile(dirs{end,1}.bids,'func',['*_rec-venc0_*_angio.nii.gz']));
+                fListTask = dir(fullfile(dirs{end,1}.bids,'func',['*_task-' rCond{end,1}{1,end}.task     '_*.nii.gz']));
                 fList     = intersect(fListAcq,fullfile({fListRec.folder },{fListRec.name })');
                 fList     = intersect(fList,fullfile({fListTask.folder},{fListTask.name})');
                 rCond{end,1}{1,end}.fList = {};
@@ -344,11 +342,11 @@ switch info.dataSetLabel
                 dsgn.condLabel = {'stim'};
                 rCond{end,1}{1,end}.dsgn  = dsgn;
                 fListAcq        = {};
-                fListAcq{end+1} = dir(fullfile(bidsDirList{end,1},'func',['*_acq-pcVenc14z*_angio.nii.gz'])); fListAcq{end} = fullfile({fListAcq{end}.folder },{fListAcq{end}.name })';
-                fListAcq{end+1} = dir(fullfile(bidsDirList{end,1},'func',['*_acq-pcVenc14ap*_angio.nii.gz'])); fListAcq{end} = fullfile({fListAcq{end}.folder },{fListAcq{end}.name })';
+                fListAcq{end+1} = dir(fullfile(dirs{end,1}.bids,'func',['*_acq-pcVenc14z*_angio.nii.gz'])); fListAcq{end} = fullfile({fListAcq{end}.folder },{fListAcq{end}.name })';
+                fListAcq{end+1} = dir(fullfile(dirs{end,1}.bids,'func',['*_acq-pcVenc14ap*_angio.nii.gz'])); fListAcq{end} = fullfile({fListAcq{end}.folder },{fListAcq{end}.name })';
                 fListAcq        = unique(cat(1,fListAcq{:}));
-                fListRec  = dir(fullfile(bidsDirList{end,1},'func',['*_rec-venc0_*_angio.nii.gz']));
-                fListTask = dir(fullfile(bidsDirList{end,1},'func',['*_task-' rCond{end,1}{1,end}.task     '_*.nii.gz']));
+                fListRec  = dir(fullfile(dirs{end,1}.bids,'func',['*_rec-venc0_*_angio.nii.gz']));
+                fListTask = dir(fullfile(dirs{end,1}.bids,'func',['*_task-' rCond{end,1}{1,end}.task     '_*.nii.gz']));
                 fList     = intersect(fListAcq,fullfile({fListRec.folder },{fListRec.name })');
                 fList     = intersect(fList,fullfile({fListTask.folder},{fListTask.name})');
                 rCond{end,1}{1,end}.fList = {};
@@ -387,8 +385,8 @@ switch info.dataSetLabel
                 dsgn.cond      = ones(size(dsgn.onsetList));
                 dsgn.condLabel = {'stim'};
                 rCond{end,1}{1,end}.dsgn  = dsgn;
-                fListAcq  = dir(fullfile(bidsDirList{end,1},'func',['*_acq-'  rCond{end,1}{1,end}.acq '*_angio.nii.gz']));
-                fListTask = dir(fullfile(bidsDirList{end,1},'func',['*_task-' rCond{end,1}{1,end}.task     '_*.nii.gz']));
+                fListAcq  = dir(fullfile(dirs{end,1}.bids,'func',['*_acq-'  rCond{end,1}{1,end}.acq '*_angio.nii.gz']));
+                fListTask = dir(fullfile(dirs{end,1}.bids,'func',['*_task-' rCond{end,1}{1,end}.task     '_*.nii.gz']));
                 fList     = intersect(fullfile({fListAcq.folder },{fListAcq.name })',fullfile({fListTask.folder},{fListTask.name})');
                 rCond{end,1}{1,end}.fList = {};
                 if ~isempty(fList); rCond{end,1}{1,end}.fList = fList; end
@@ -413,9 +411,9 @@ switch info.dataSetLabel
                 dsgn.cond      = ones(size(dsgn.onsetList));
                 dsgn.condLabel = {'stim'};
                 rCond{end,1}{1,end}.dsgn  = dsgn;
-                fListAcq  = dir(fullfile(bidsDirList{end,1},'func',['*_acq-pcVenc7z*_angio.nii.gz']));
-                fListRec  = dir(fullfile(bidsDirList{end,1},'func',['*_rec-venc0_*_angio.nii.gz']));
-                fListTask = dir(fullfile(bidsDirList{end,1},'func',['*_task-' rCond{end,1}{1,end}.task     '_*.nii.gz']));
+                fListAcq  = dir(fullfile(dirs{end,1}.bids,'func',['*_acq-pcVenc7z*_angio.nii.gz']));
+                fListRec  = dir(fullfile(dirs{end,1}.bids,'func',['*_rec-venc0_*_angio.nii.gz']));
+                fListTask = dir(fullfile(dirs{end,1}.bids,'func',['*_task-' rCond{end,1}{1,end}.task     '_*.nii.gz']));
                 fList     = intersect(fullfile({fListAcq.folder },{fListAcq.name })',fullfile({fListRec.folder },{fListRec.name })');
                 fList     = intersect(fList,fullfile({fListTask.folder},{fListTask.name})');
                 rCond{end,1}{1,end}.fList = {};
@@ -439,7 +437,7 @@ switch info.dataSetLabel
 
                 %%%% bold
                 dummy = 5;
-                dir(fullfile(bidsDirList{end,1},'func','*.nii.gz'))
+                dir(fullfile(dirs{end,1}.bids,'func','*.nii.gz'))
 
                 %%%%% 50sPrd5sDur
                 rCond{end,1}{1,end+1} = runCond;
@@ -459,7 +457,7 @@ switch info.dataSetLabel
                 dsgn.cond      = ones(size(dsgn.onsetList));
                 dsgn.condLabel = {'stim'};
                 rCond{end,1}{1,end}.dsgn  = dsgn;
-                rCond{end,1}{1,end}.fList = dir(fullfile(bidsDirList{end,1},'func',['*task-' rCond{end,1}{1,end}.task '*_bold.nii.gz']));
+                rCond{end,1}{1,end}.fList = dir(fullfile(dirs{end,1}.bids,'func',['*task-' rCond{end,1}{1,end}.task '*_bold.nii.gz']));
                 rCond{end,1}{1,end}.fList = fullfile({rCond{end,1}{1,end}.fList.folder},{rCond{end,1}{1,end}.fList.name})';
                 rCond{end,1}{1,end}.date  = repmat(acqDate,size(rCond{end,1}{1,end}.fList));
                 dummyList{end,1}{1,end+1} = repmat(dummy,size(rCond{end,1}{1,end}.fList));
@@ -482,12 +480,12 @@ switch info.dataSetLabel
                 dsgn.cond      = ones(size(dsgn.onsetList));
                 dsgn.condLabel = {'stim'};
                 rCond{end,1}{1,end}.dsgn  = dsgn;
-                fListAcq  = dir(fullfile(bidsDirList{end,1},'func','*_bold.nii.gz'));
-                fListTask = dir(fullfile(bidsDirList{end,1},'func',['*_task-' rCond{end,1}{1,end}.task     '_*.nii.gz']));
+                fListAcq  = dir(fullfile(dirs{end,1}.bids,'func','*_bold.nii.gz'));
+                fListTask = dir(fullfile(dirs{end,1}.bids,'func',['*_task-' rCond{end,1}{1,end}.task     '_*.nii.gz']));
                 fList     = intersect(fullfile({fListAcq.folder },{fListAcq.name })',fullfile({fListTask.folder},{fListTask.name})');
                 rCond{end,1}{1,end}.fList = {};
                 if ~isempty(fList); rCond{end,1}{1,end}.fList = fList; end
-                % rCond{end,1}{1,end}.fList = dir(fullfile(bidsDirList{end,1},'func',['*task-' rCond{end,1}{1,end}.task '*_angio.nii.gz']));
+                % rCond{end,1}{1,end}.fList = dir(fullfile(dirs{end,1}.bids,'func',['*task-' rCond{end,1}{1,end}.task '*_angio.nii.gz']));
                 % rCond{end,1}{1,end}.fList = fullfile({rCond{end,1}{1,end}.fList.folder},{rCond{end,1}{1,end}.fList.name})';
                 rCond{end,1}{1,end}.date  = repmat(acqDate,size(rCond{end,1}{1,end}.fList));
                 dummyList{end,1}{1,end+1} = repmat(dummy,size(rCond{end,1}{1,end}.fList));
@@ -510,14 +508,14 @@ switch info.dataSetLabel
                 dsgn.cond      = ones(size(dsgn.onsetList));
                 dsgn.condLabel = {'stim'};
                 rCond{end,1}{1,end}.dsgn  = dsgn;
-                rCond{end,1}{1,end}.fList = dir(fullfile(bidsDirList{end,1},'func',['*task-' rCond{end,1}{1,end}.task '*_bold.nii.gz']));
+                rCond{end,1}{1,end}.fList = dir(fullfile(dirs{end,1}.bids,'func',['*task-' rCond{end,1}{1,end}.task '*_bold.nii.gz']));
                 rCond{end,1}{1,end}.fList = fullfile({rCond{end,1}{1,end}.fList.folder},{rCond{end,1}{1,end}.fList.name})';
                 rCond{end,1}{1,end}.date  = repmat(acqDate,size(rCond{end,1}{1,end}.fList));
                 dummyList{end,1}{1,end+1} = repmat(dummy,size(rCond{end,1}{1,end}.fList));
 
 
                 %%% Assert we are not missing any funcitonal files
-                fList1 = dir(fullfile(bidsDirList{end,1},'func','*.nii.gz')); fList1 = fullfile({fList1.folder},{fList1.name})';
+                fList1 = dir(fullfile(dirs{end,1}.bids,'func','*.nii.gz')); fList1 = fullfile({fList1.folder},{fList1.name})';
                 fList2 = [rCond{end}{:}]; fList2 = {fList2.fList}'; fList2 = fList2(~cellfun('isempty',fList2));
                 for r = 1:length(fList2); fList2{r} = fList2{r}(:); end;                
                 rcGrp = {}; for i = 1:length(fList2); rcGrp{end+1} = num2str(i.*ones(size(fList2{i}))); end
@@ -537,7 +535,7 @@ switch info.dataSetLabel
                     else
                         fileTime = rCond{end}{rc}.date + getAcqTime(rCond{end}{rc}.fList(:,1));
                         % fileTime = rCond{end}{rc}.date + (fileTime - datetime(strcat(cellstr(num2str(year(fileTime),'%04d')),'-',cellstr(num2str(month(fileTime),'%02d')),'-',cellstr(num2str(day(fileTime),'%02d')))));
-                        rCond{end}{rc}.bhvr = parseBehavior_RetinotopicStimulator(fullfile(bhvrDir{end},'vsmDriven.log'),fileTime);
+                        rCond{end}{rc}.bhvr = parseBehavior_RetinotopicStimulator(fullfile(dirs{end,1}.bhvr,'vsmDriven.log'),fileTime);
                     end
                 end
                 assertBehavior_RetinotopicStimulator2(rCond{end})
@@ -549,7 +547,7 @@ switch info.dataSetLabel
                 
                 %%% physio
                 forceThis = 0;
-                phsFile = phsDir{end}; if exist(phsFile,'dir'); phsFile = dir(fullfile(phsDir{end},'*.mat')); phsFile(ismember({phsFile.name},{'manId.mat' 'minCurated.mat'})) = []; end
+                phsFile = dirs{end,1}.phs; if exist(phsFile,'dir'); phsFile = dir(fullfile(dirs{end,1}.phs,'*.mat')); phsFile(ismember({phsFile.name},{'manId.mat' 'minCurated.mat'})) = []; end
                 if ~exist('phs','var'); phs = {}; end
                 phs{end+1,1} = [];
                 if ~isempty(phsFile)
@@ -558,7 +556,7 @@ switch info.dataSetLabel
                     if isempty(cat(1,tmp.fList))
                         disp('no MRI to get physio for')
                     else
-                        phs{end,1} = extractLabChartData4(fullfile(phsFile.folder,phsFile.name),rCond{end},char(phsDir{end}),forceThis);
+                        phs{end,1} = extractLabChartData4(fullfile(phsFile.folder,phsFile.name),rCond{end},char(dirs{end,1}.phs),forceThis);
                     end
                 end
                 
@@ -589,7 +587,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-return
+
 
 % for i = 1:length(rCond)
 %     tmp = [rCond{i}{:}];
