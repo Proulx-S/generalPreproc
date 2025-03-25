@@ -1,681 +1,118 @@
 clear all
 close all
-[outDir,pipId] = fileparts(mfilename('fullpath'));
-outDir = fullfile(outDir,pipId); if ~exist(outDir,'dir'); mkdir(outDir); end
+
+%%%%%%%%%%%%%%%%%%%%%
+%% Set up environment
+%%%%%%%%%%%%%%%%%%%%%
+
+% Detect computing environment
+os   = char(java.lang.System.getProperty('os.name'));
+host = char(java.net.InetAddress.getLocalHost.getHostName);
+user = char(java.lang.System.getProperty('user.name'));
+
+% Configure paths accordingly
+if strcmp(os,'Linux') && strcmp(host,'takoyaki') && strcmp(user,'sebp')
+    storageDir = '/local/users/sebp/';
+    scratchDir = '/scratch/users/sebp/';
+    toolDir    = '~/tools';
+    workScript = mfilename;
+    workFile   = [workScript '.mat'];
+    workDir    = fullfile('~/work/generalPreproc/',workScript); if ~exist(workDir,'dir'); mkdir(workDir); end
+    workFile   = fullfile(fileparts(workDir),workFile);
+    envId      = 1;
+else
+    dbstack; error('not implemented')
+end
 
 
-%%%%%%%%%%%%%%%%%%
-%% Dependencies %%
-%%%%%%%%%%%%%%%%%%
-% matlab
-addpath(genpath(fullfile(pwd,pipId)))
-addpath(genpath('/usr/local/freesurfer/stable7.4.1/matlab/'))
-addpath(genpath('/space/takoyaki/1/users/proulxs/tools/chronux'))
-addpath(genpath('/space/takoyaki/1/users/proulxs/tools/vasomoTools'))
 addpath(genpath('/space/takoyaki/1/users/proulxs/tools/bassReg2'))
-addpath(genpath('/space/takoyaki/1/users/proulxs/tools/martinosTools'))
-addpath(genpath('/space/takoyaki/1/users/proulxs/tools/util'))
 
-% bash
-global srcAfni srcFs
-srcFs = 'source /usr/local/freesurfer/fs-stable741-env-autoselect';
-srcAfni = 'export PATH=$PATH:/usr/pubsw/packages/AFNI/23.1.05';
-%%%%%%%%%%%%%%%%%%
-%% %%%%%%%%%%%%%%%
+% Load dependencies
+%%% matlab
+addpath(genpath(         workDir                                 ))
+tool = 'bassReg2';    toolURL = 'https://github.com/Proulx-S/bassReg2.git';
+if ~exist(fullfile(toolDir, tool), 'dir'); system(['git clone ' toolURL ' ' fullfile(toolDir, tool)]); end
+addpath(genpath(fullfile(toolDir,tool)))
+tool = 'vasomoTools'; toolURL = 'https://github.com/Proulx-S/vasomoTools.git';
+if ~exist(fullfile(toolDir, tool), 'dir'); system(['git clone ' toolURL ' ' fullfile(toolDir, tool)]); end
+addpath(genpath(fullfile(toolDir,tool)))
+tool = 'chronux';     toolURL = 'https://github.com/Proulx-S/chronux';
+if ~exist(fullfile(toolDir, tool), 'dir'); system(['git clone ' toolURL ' ' fullfile(toolDir, tool)]); end
+addpath(genpath(fullfile(toolDir,'chronux/chronux_2_12/modified')))
+tool = 'fieldtrip';   toolURL = 'https://github.com/fieldtrip/fieldtrip';
+if ~exist(fullfile(toolDir, tool), 'dir'); system(['git clone ' toolURL ' ' fullfile(toolDir, tool)]); end
+addpath(genpath(fullfile(toolDir,'fieldtrip/external/freesurfer')))
+%%% neurodesk
+switch envId
+    case 1
+        global src
+        %%%% afni
+        src.afni = 'ml afni/24.3.00';
+        system([src.afni '; 3dinfo > /dev/null'],'-echo');
+        %%%% freesurfer
+        src.fs   = 'ml freesurfer/8.0.0';
+        system([src.fs   '; mri_convert > /dev/null'],'-echo');
+        %%%% fsl for fslview once we figure out how to make it work
+    otherwise
+        dbstack; error('not implemented')
+        % neurodeskModule = {
+        % ":/neurodesktop-storage/containers/freesurfer_8.0.0_20250210"
+        % ":/neurodesktop-storage/containers/afni_24.3.00_20241003"};
+        % for i = 1:length(neurodeskModule)
+        %     if contains(getenv("PATH"),neurodeskModule{i}); continue; end
+        %     setenv("PATH",getenv("PATH") + neurodeskModule{i});
+        % end
+end
+
+
+
+
+
+
+
+
+% clear all
+% close all
+% [outDir,pipId] = fileparts(mfilename('fullpath'));
+% outDir = fullfile(outDir,pipId); if ~exist(outDir,'dir'); mkdir(outDir); end
+
+
+% %%%%%%%%%%%%%%%%%%
+% %% Dependencies %%
+% %%%%%%%%%%%%%%%%%%
+% % matlab
+% addpath(genpath(fullfile(pwd,pipId)))
+% addpath(genpath('/usr/local/freesurfer/stable7.4.1/matlab/'))
+% addpath(genpath('/space/takoyaki/1/users/proulxs/tools/chronux'))
+% addpath(genpath('/space/takoyaki/1/users/proulxs/tools/vasomoTools'))
+% addpath(genpath('/space/takoyaki/1/users/proulxs/tools/bassReg2'))
+% addpath(genpath('/space/takoyaki/1/users/proulxs/tools/martinosTools'))
+% addpath(genpath('/space/takoyaki/1/users/proulxs/tools/util'))
+
+% % bash
+% global srcAfni srcFs
+% srcFs = 'source /usr/local/freesurfer/fs-stable741-env-autoselect';
+% srcAfni = 'export PATH=$PATH:/usr/pubsw/packages/AFNI/23.1.05';
+% %%%%%%%%%%%%%%%%%%
+% %% %%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Variables, Paths and stim/acq info %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-info.dataSetLabel = 'vsmDriven'; % 'vsmRing' 'vsmDriven' 'vsmDiamCenSur'
+info.dataSetLabel = 'vsmDiamCenSur'; % 'vsmRing' 'vsmDriven' 'vsmDiamCenSur'
 
 switch info.dataSetLabel
-    case 'vsmDriven'
-        info.datasetDir = fullfile(outDir,info.dataSetLabel);
-        info.pipId      = pipId;
-        info.bidsDir    = fullfile(info.datasetDir,'bids');   if ~exist(info.bidsDir,'dir'); mkdir(info.bidsDir); end
-        info.srcDir     = fullfile(info.datasetDir,'source'); if ~exist(info.srcDir ,'dir'); mkdir(info.srcDir ); end
-        info.prcDir     = fullfile(info.datasetDir,'proc');   if ~exist(info.prcDir ,'dir'); mkdir(info.prcDir ); end
-        %%% Source data location
-        info.dbDir      = '/space/takoyaki/1/users/proulxs/vasomo/source/expDb';
-
-        %%% Subject and session info
-        sesDbListTmp = {};
-        
-        % sesDbListTmp{end+1,1}{1,1} = fullfile(info.dbDir,'vsmDrivenP1/2024-09-05--bay2--vsmDrivenP01'); % example containing restEyeOpen
-        % sesDbListTmp{end+1,1}{1,1} = fullfile(info.dbDir,'vsmDrivenP5/2024-12-10--bay2--vsmDrivenP5_ses2'); % example containing fixOnly
-        % sesDbListTmp{end+1,1}{1,1} = fullfile(info.dbDir,'vsmDiamCenSurP1/2024-12-04--bay2--vsmDiamCenSurP1'); % example containing 2 fixOnly runs
-        
-        sesDbListTmp{end+1,1}{    1,1} = fullfile(info.dbDir,'vsmDrivenP1/2024-07-28--bay2--vsmDrivenP1' );
-        sesDbListTmp{end  ,1}{end+1,1} = fullfile(info.dbDir,'vsmDrivenP1/2024-08-09--bay2--vsmDrivenP1' );
-        sesDbListTmp{end  ,1}{end+1,1} = fullfile(info.dbDir,'vsmDrivenP1/2024-09-05--bay2--vsmDrivenP01');
-
-        sesDbListTmp{end+1,1}{    1,1} = fullfile(info.dbDir,'vsmDrivenP2/2024-07-28--bay2--vsmDrivenP2');
-        sesDbListTmp{end  ,1}{end+1,1} = fullfile(info.dbDir,'vsmDrivenP2/2024-08-05--bay2--vsmDrivenP2');
-
-        sesDbListTmp{end+1,1}{    1,1} = fullfile(info.dbDir,'vsmDrivenP3/2024-10-08--bay2--vsmDrivenP3');
-
-        sesDbListTmp{end+1,1}{    1,1} = fullfile(info.dbDir,'vsmDrivenP4/2024-10-15--bay2--vsmDrivenP4');
-
-        sesDbListTmp{end+1,1}{    1,1} = fullfile(info.dbDir,'vsmDrivenP5/2024-10-17--bay2--vsmDrivenP5');
-        sesDbListTmp{end  ,1}{end+1,1} = fullfile(info.dbDir,'vsmDrivenP5/2024-12-10--bay2--vsmDrivenP5_ses2');
-
-        sesDbListTmp{end+1,1}{    1,1} = fullfile(info.dbDir,'vsmDiamCenSurP2/2024-12-13--bay2--vsmDiamCenSurP2');
-        sesDbListTmp{end  ,1}{end+1,1} = fullfile(info.dbDir,'vsmDrivenP6/2025-01-26--bay2--vsmDrivenP5');
-
-
-        for sub = 1:length(sesDbListTmp)
-            for ses = 1:length(sesDbListTmp{sub})
-                if isempty(sesDbListTmp{sub}{ses}); continue; end
-
-                if ~exist('subList','var');         subList = {}; end
-                subList{end+1,1}                            = [info.dataSetLabel 'P' num2str(sub)];
-                if ~exist('sesList','var');         sesList = {}; end
-                sesList{end+1,1}                            = num2str(ses);
-                if ~exist('sesDbList','var');     sesDbList = {}; end
-                sesDbList{end+1,1}                          = sesDbListTmp{sub}{ses};
-                if ~exist('prcDirList','var');   prcDirList = {}; end
-                prcDirList{end+1,1}                         = fullfile(info.prcDir ,['sub-' subList{end}],['ses-' sesList{end}]);
-                if ~exist('bidsDirList','var'); bidsDirList = {}; end
-                if ~exist('bhvrDir','var');         bhvrDir = {}; end
-                if ~exist('phsDir','var');           phsDir = {}; end
-                
-                %%% copy from database
-                disp('Copying data from db')
-                forceThis = 0;
-                [bidsDirList{end+1,1},bhvrDir{end+1,1},phsDir{end+1,1}] = ...
-                    db2bids(sesDbListTmp{sub}{ses},subList{end},sesList{end},info,forceThis);
-                [~,acqDate,~] = fileparts(sesDbList{end}); acqDate = strsplit(acqDate,'--'); acqDate = datetime(acqDate{1},'InputFormat','yyyy-MM-dd');
-                if ~exist(bidsDirList{end,1},'dir'); warning(['Did you forget to copy' newline sesDbList{end,1} newline '(aka the MRI source folder)' newline 'to' newline bidsDirList{end,1} newline '(aka the bids folder)?']); end
-
-                
-                %%% anat
-                dir(fullfile(bidsDirList{end,1},'anat','*.nii.gz'))
-                %%%% avMap
-                if ~exist('avMap','var'); avMap = {}; end
-                avMap{end+1,1}.fList = dir(fullfile(bidsDirList{end,1},'anat','*acq-avMap*.nii.gz'));
-                %%%% memprage
-                if ~exist('memprage','var'); memprage = {}; end
-                memprage{end+1,1}.fList = dir(fullfile(bidsDirList{end,1},'anat','*_T1w.nii.gz'));
-                % if ~isempty(memprage{end,1}.fList)
-                %     tmp = dir(fullfile(info.dbDir,subList{end},'*','fs',subList{end}));
-                %     memprage{end,1}.fsDir = tmp(1).folder; clear tmp
-                % else
-                %     switch subList{end}
-                %         case 'vsmRingP1'
-                %             memprage{end,1}.fsDir = '/autofs/space/takoyaki_001/users/proulxs/vasomo/source/expDb/vsmDrivenP1/2024-07-28--bay2--vsmDrivenP1/fs/vsmDrivenP1';
-                %         otherwise
-                %             warning(['could not find memprage of fsDir for sub-' subList{end} '_ses-' sesList{end} newline 'please specify fsDir'])
-                %     end
-                % end
-                %%%% pcMRA
-                if ~exist('pcMRA','var'); pcMRA = {}; end
-                pcMRA{end+1,1}.fList = dir(fullfile(bidsDirList{end,1},'anat','*acq-pcVenc*.nii.gz'));
-                %%%% tof
-                if ~exist('tof','var'); tof = {}; end
-                tof{end+1,1}.fList = dir(fullfile(bidsDirList{end,1},'anat','*acq-tof*.nii.gz'));
-
-
-                %%% fmap
-                %%%% topup
-                if ~exist('b0','var'); b0 = {}; end
-                b0{end+1,1}.label = 'topup';
-                b0{end,1}.fList = dir(fullfile(bidsDirList{end,1},'fmap','*_epi.nii.gz'));
-                %%%% sa2rage
-                if ~exist('b1','var'); b1 = {}; end
-                b1{end+1,1}.label = 'B1';
-                b1{end,1}.fList = dir(fullfile(bidsDirList{end,1},'fmap','*_TB1SRGE.nii.gz'));
-
-
-                %%% func
-                if ~exist('rCond','var');     rCond = {}; end
-                rCond{end+1,1}   = {};
-                if ~exist('dummyList','var'); dummyList = {}; end
-                dummyList{end+1,1} = {};
-
-
-
-                % if sub==6 && ses==1; keyboard; end
-                
-                %%%% vfMRI
-                dummy = 5;
-                dir(fullfile(bidsDirList{end,1},'func','*_angio.nii.gz'))
-
-                %%%%% (1) 50sPrd*sDur (2) ??sPrd1sDur, (3) ??sPrd50dc, (4) eyeOpenRest and (5) fixOnly  -- (1) functionalLocalizer-ringing-centerSurround, Kleinfeld's (2) variable and (3) fixed duty-cycle, (4) rest eyes open on gray background, and (5) fixation task without stim
-                condList        = {}            ; stimPeriodList        =  []; stimDurList        =  []; % in number of volumes
-                condList{end+1} = '50sPrd1sDur' ; stimPeriodList(end+1) =  57; stimDurList(end+1) =   1; % in number of volumes
-                condList{end+1} = '50sPrd5sDur' ; stimPeriodList(end+1) =  57; stimDurList(end+1) =   6; % in number of volumes
-                condList{end+1} = '50sPrd10sDur'; stimPeriodList(end+1) =  57; stimDurList(end+1) =  12; % in number of volumes
-                condList{end+1} = '05sPrd1sDur' ; stimPeriodList(end+1) =   6; stimDurList(end+1) =   1; % in number of volumes
-                condList{end+1} = '06sPrd1sDur' ; stimPeriodList(end+1) =   7; stimDurList(end+1) =   1; % in number of volumes
-                condList{end+1} = '08sPrd1sDur' ; stimPeriodList(end+1) =  10; stimDurList(end+1) =   1; % in number of volumes
-                condList{end+1} = '10sPrd1sDur' ; stimPeriodList(end+1) =  12; stimDurList(end+1) =   1; % in number of volumes
-                condList{end+1} = '10sPrd50dc'  ; stimPeriodList(end+1) =  12; stimDurList(end+1) =   6; % in number of volumes
-                condList{end+1} = '15sPrd1sDur' ; stimPeriodList(end+1) =  18; stimDurList(end+1) =   1; % in number of volumes
-                condList{end+1} = '15sPrd50dc'  ; stimPeriodList(end+1) =  18; stimDurList(end+1) =   9; % in number of volumes
-                condList{end+1} = '20sPrd1sDur' ; stimPeriodList(end+1) =  24; stimDurList(end+1) =   1; % in number of volumes
-                condList{end+1} = '30sPrd1sDur' ; stimPeriodList(end+1) =  36; stimDurList(end+1) =   1; % in number of volumes
-                condList{end+1} = '30sPrd50dc'  ; stimPeriodList(end+1) =  36; stimDurList(end+1) =  18; % in number of volumes
-                condList{end+1} = 'eyeOpenRest' ; stimPeriodList(end+1) = nan; stimDurList(end+1) = nan; % in number of volumes
-                condList{end+1} = 'fixOnly'     ; stimPeriodList(end+1) = nan; stimDurList(end+1) = nan; % in number of volumes
-                for c = 1:length(condList)
-                    rCond{end,1}{1,end+1} = runCond;
-                    rCond{end,1}{1,end}.sub  = subList{end};
-                    rCond{end,1}{1,end}.ses  = sesList{end};
-                    rCond{end,1}{1,end}.acq  = 'vfMRI';
-                    rCond{end,1}{1,end}.task = condList{c};
-                    if ~isnan(stimPeriodList(c)) && ~isnan(stimDurList(c))
-                        dsgn = runDsgn;
-                        dsgn.task = rCond{end,1}{1,end}.task;
-                        dsgn.dt   = 0.840;
-                        initRest   = dsgn.dt*12;
-                        stimPeriod = dsgn.dt*stimPeriodList(c);
-                        stimDur    = dsgn.dt*stimDurList(c);
-                        runDur     = dsgn.dt*354;
-                        dsgn.onsetList = initRest:stimPeriod:(runDur-stimPeriod);
-                        dsgn.ondurList = ones(size(dsgn.onsetList)).*(stimDur);
-                        dsgn.cond      = ones(size(dsgn.onsetList));
-                        dsgn.condLabel = {'stim'};
-                        rCond{end,1}{1,end}.dsgn  = dsgn;
-                    else
-                        rCond{end,1}{1,end}.dsgn  =   [];
-                    end
-                    fListAcq  = dir(fullfile(bidsDirList{end,1},'func',['*_acq-'  rCond{end,1}{1,end}.acq '*_angio.nii.gz']));
-                    fListTask = dir(fullfile(bidsDirList{end,1},'func',['*_task-' rCond{end,1}{1,end}.task     '_*.nii.gz']));
-                    fList     = intersect(fullfile({fListAcq.folder },{fListAcq.name })',fullfile({fListTask.folder},{fListTask.name})');
-                    rCond{end,1}{1,end}.fList = {};
-                    if ~isempty(fList); rCond{end,1}{1,end}.fList = fList; end
-                    rCond{end,1}{1,end}.date  = repmat(acqDate,size(rCond{end,1}{1,end}.fList));
-                    dummyList{end,1}{1,end+1} = repmat(dummy,size(rCond{end,1}{1,end}.fList));
-                end
-
-
-                %%%% bold
-                dummy = 5;
-                dir(fullfile(bidsDirList{end,1},'func','*_bold.nii.gz'))
-
-
-                %%%%% 50sPrd*sDur  -- functionalLocalizer
-                condList        = {}            ; stimPeriodList        =  []; stimDurList        =  []; % in number of volumes
-                condList{end+1} = '50sPrd1sDur' ; stimPeriodList(end+1) =  57; stimDurList(end+1) =   1; % in number of volumes
-                condList{end+1} = '50sPrd5sDur' ; stimPeriodList(end+1) =  57; stimDurList(end+1) =   6; % in number of volumes
-                condList{end+1} = '50sPrd10sDur'; stimPeriodList(end+1) =  57; stimDurList(end+1) =  12; % in number of volumes
-                for c = 1:length(condList)
-                    rCond{end,1}{1,end+1} = runCond;
-                    rCond{end,1}{1,end}.sub  = subList{end};
-                    rCond{end,1}{1,end}.ses  = sesList{end};
-                    rCond{end,1}{1,end}.acq  = 'bold';
-                    rCond{end,1}{1,end}.task = condList{c};
-                    if ~isnan(stimPeriodList(c)) && ~isnan(stimDurList(c))
-                        dsgn = runDsgn;
-                        dsgn.task = rCond{end,1}{1,end}.task;
-                        dsgn.dt   = 0.840;
-                        initRest   = dsgn.dt*12;
-                        stimPeriod = dsgn.dt*stimPeriodList(c);
-                        stimDur    = dsgn.dt*stimDurList(c);
-                        runDur     = dsgn.dt*354;
-                        dsgn.onsetList = initRest:stimPeriod:(runDur-stimPeriod);
-                        dsgn.ondurList = ones(size(dsgn.onsetList)).*(stimDur);
-                        dsgn.cond      = ones(size(dsgn.onsetList));
-                        dsgn.condLabel = {'stim'};
-                        rCond{end,1}{1,end}.dsgn  = dsgn;
-                    else
-                        rCond{end,1}{1,end}.dsgn  =   [];
-                    end
-                    % fListAcq1 = dir(fullfile(bidsDirList{end,1},'func',['*_acq-'  rCond{end,1}{1,end}.acq '*_bold.nii.gz'])); fListAcq1 = fullfile({fListAcq1.folder},{fListAcq1.name})';
-                    % fListAcq2 = dir(fullfile(bidsDirList{end,1},'func',                          '*_acq-epi*_bold.nii.gz' )); fListAcq2 = fullfile({fListAcq2.folder},{fListAcq2.name})';
-                    % fListAcq  = union(fListAcq1,fListAcq2);
-                    fListAcq  = dir(fullfile(bidsDirList{end,1},'func',                       '*_acq-epi*_bold.nii.gz' )); fListAcq  = fullfile({fListAcq.folder} ,{fListAcq.name} )';
-                    fListTask = dir(fullfile(bidsDirList{end,1},'func',['*_task-' rCond{end,1}{1,end}.task '_*.nii.gz'])); fListTask = fullfile({fListTask.folder},{fListTask.name})';
-                    fList     = intersect(fListAcq,fListTask);
-                    rCond{end,1}{1,end}.fList = {};
-                    if ~isempty(fList); rCond{end,1}{1,end}.fList = fList; end
-                    rCond{end,1}{1,end}.date  = repmat(acqDate,size(rCond{end,1}{1,end}.fList));
-                    dummyList{end,1}{1,end+1} = repmat(dummy,size(rCond{end,1}{1,end}.fList));
-                end
-
-
-
-                %%% Assert we are not missing any funcitonal files
-                fList1 = dir(fullfile(bidsDirList{end,1},'func','*.nii.gz')); fList1 = fullfile({fList1.folder},{fList1.name})';
-                fList2 = [rCond{end}{:}]; fList2 = {fList2.fList}'; fList2 = fList2(~cellfun('isempty',fList2));
-                for r = 1:length(fList2); fList2{r} = fList2{r}(:); end;                
-                rcGrp = {}; for i = 1:length(fList2); rcGrp{end+1} = num2str(i.*ones(size(fList2{i}))); end
-                fList2 = cat(1,fList2{:}); if ~iscell(fList2); fList2 = {}; end
-                rcGrp  = cat(1,rcGrp{:} );% if ~iscell(rcGrp);  rcGrp  = {}; end
-                disp('db func files accouted for')
-                [~,b] = fileparts(fList2);
-                disp(char(strcat(rcGrp,'---',b)))
-                disp('db func files NOT accouted for')
-                [~,b] = fileparts(fList1(~ismember(fList1,fList2)));
-                disp(char(b))
-
-
-                %%% behav
-                for rc = 1:length(rCond{end})
-                    if isempty(rCond{end}{rc}.fList) || ismember(rCond{end}{rc}.task,{'eyeOpenRest'})
-                        rCond{end}{rc}.bhvr = [];
-                    else
-                        fileTime = rCond{end}{rc}.date + getAcqTime(rCond{end}{rc}.fList(:,1));
-                        % fileTime = rCond{end}{rc}.date + (fileTime - datetime(strcat(cellstr(num2str(year(fileTime),'%04d')),'-',cellstr(num2str(month(fileTime),'%02d')),'-',cellstr(num2str(day(fileTime),'%02d')))));
-                        rCond{end}{rc}.bhvr = parseBehavior_RetinotopicStimulator(fullfile(bhvrDir{end},'vsmDriven.log'),fileTime);
-                    end
-                end
-                assertBehavior_RetinotopicStimulator2(rCond{end})
-
-                
-
-                
-                %%% physio
-                forceThis = 0;
-                phsFile = phsDir{end}; if exist(phsFile,'dir'); phsFile = dir(fullfile(phsDir{end},'*.mat')); phsFile(ismember({phsFile.name},{'manId.mat' 'minCurated.mat'})) = []; end
-                if ~exist('phs','var'); phs = {}; end
-                phs{end+1,1} = [];
-                if ~isempty(phsFile)
-                    tmp = cat(1,rCond{end}{:});
-                    for rc = 1:length(tmp); if ~isempty(tmp(rc).fList); tmp(rc).fList = tmp(rc).fList(:,1); end; end
-                    if isempty(cat(1,tmp.fList))
-                        disp('no MRI to get physio for')
-                    else
-                        phs{end,1} = extractLabChartData4(fullfile(phsFile.folder,phsFile.name),rCond{end},char(phsDir{end}),forceThis);
-                    end
-                end
-
-
-
-                %% insert catch trials in design
-                for rc = 1:length(rCond{end})
-                    if isempty(rCond{end}{rc}.fList) || ismember(rCond{end}{rc}.task,{'eyeOpenRest' 'fixOnly'}); continue; end
-                    if length(unique({rCond{end}{rc}.bhvr.par}'))>1; dbstack; error('X'); end
-                    par = unique({rCond{end}{rc}.bhvr.par}');
-                    parCatch = contains(par,'_catch');
-                    % strjoin({num2str(rc) rCond{end}{rc}.sub rCond{end}{rc}.ses rCond{end}{rc}.acq rCond{end}{rc}.task char(par) num2str(parCatch)},'; ')
-                    if parCatch
-                        switch rCond{end}{rc}.dsgn.task
-                            case '05sPrd1sDur'
-                                rCond{end}{rc}.dsgn.cond(29) = 0;
-                            case '06sPrd1sDur'
-                                rCond{end}{rc}.dsgn.cond(25) = 0;
-                            case '08sPrd1sDur'
-                                rCond{end}{rc}.dsgn.cond(18) = 0;
-                            case '10sPrd1sDur'
-                                rCond{end}{rc}.dsgn.cond(15) = 0;
-                            case '15sPrd1sDur'
-                                rCond{end}{rc}.dsgn.cond(10) = 0;
-                            case '20sPrd1sDur'
-                                rCond{end}{rc}.dsgn.cond(8) = 0;
-                        end
-                    end
-                    % strjoin({num2str(rc) rCond{end}{rc}.dsgn.task char(par) num2str(rCond{end}{rc}.dsgn.cond)},'; ')
-                end
-
-
-                % sub
-                % ses
-                % keyboard
-
-            end
-        end
-        % subList
-        % sesList
-        % s = 1;
-        % rCond{s}{:}
-        % pcMRA{s}.fList.name
-        % memprage{s}
-        % avMap{s}
-        % b0{s}.fList.name
-        % b1{s}.fList.name
-
-
-        
-
-    case 'vsmDrivenRef'
-        info.datasetDir = fullfile(outDir,info.dataSetLabel);
-        info.pipId      = pipId;
-        info.bidsDir    = fullfile(info.datasetDir,'bids');   if ~exist(info.bidsDir,'dir'); mkdir(info.bidsDir); end
-        info.srcDir     = fullfile(info.datasetDir,'source'); if ~exist(info.srcDir ,'dir'); mkdir(info.srcDir ); end
-        info.prcDir     = fullfile(info.datasetDir,'proc');   if ~exist(info.prcDir ,'dir'); mkdir(info.prcDir ); end
-        %%% Source data location
-        info.dbDir      = '/space/takoyaki/1/users/proulxs/vasomo/source/expDb';
-
-        %%% Subject and session info
-        sub = 1; ses = 1;
-        sesDbListTmp{sub,1}{ses,1} = '/space/takoyaki/1/users/proulxs/vasomo/source/expDb/vsmDrivenP1/2024-07-28--bay2--vsmDrivenP1';
-        sub = 1; ses = 2;
-        sesDbListTmp{sub,1}{ses,1} = '/space/takoyaki/1/users/proulxs/vasomo/source/expDb/vsmDrivenP1/2024-08-09--bay2--vsmDrivenP1';
-        sub = 1; ses = 3;
-        sesDbListTmp{sub,1}{ses,1} = '/space/takoyaki/1/users/proulxs/vasomo/source/expDb/vsmDrivenP1/2024-09-05--bay2--vsmDrivenP01';
-        sub = 2; ses = 1;
-        sesDbListTmp{sub,1}{ses,1} = '/space/takoyaki/1/users/proulxs/vasomo/source/expDb/vsmDrivenP2/2024-07-28--bay2--vsmDrivenP2';
-        sub = 2; ses = 2;
-        sesDbListTmp{sub,1}{ses,1} = '/space/takoyaki/1/users/proulxs/vasomo/source/expDb/vsmDrivenP2/2024-08-05--bay2--vsmDrivenP2';
-        sub = 3; ses = 1;
-        sesDbListTmp{sub,1}{ses,1} = '/space/takoyaki/1/users/proulxs/vasomo/source/expDb/vsmDrivenP3/2024-10-08--bay2--vsmDrivenP3';
-        sub = 4; ses = 1;
-        sesDbListTmp{sub,1}{ses,1} = '/space/takoyaki/1/users/proulxs/vasomo/source/expDb/vsmDrivenP4/2024-10-15--bay2--vsmDrivenP4';
-        sub = 5; ses = 1;
-        sesDbListTmp{sub,1}{ses,1} = '/space/takoyaki/1/users/proulxs/vasomo/source/expDb/vsmDrivenP5/2024-10-17--bay2--vsmDrivenP5';
-        sub = 5; ses = 2;
-        sesDbListTmp{sub,1}{ses,1} = '/space/takoyaki/1/users/proulxs/vasomo/source/expDb/vsmDrivenP5/2024-12-10--bay2--vsmDrivenP5_ses2';
-
-        for sub = 1:length(sesDbListTmp)
-            for ses = 1:length(sesDbListTmp{sub})
-                if isempty(sesDbListTmp{sub}{ses}); continue; end
-
-                if ~exist('subList','var');         subList = {}; end
-                subList{end+1,1}                            = [info.dataSetLabel 'P' num2str(sub)];
-                if ~exist('sesList','var');         sesList = {}; end
-                sesList{end+1,1}                            = num2str(ses);
-                if ~exist('sesDbList','var');     sesDbList = {}; end
-                sesDbList{end+1,1}                          = sesDbListTmp{sub}{ses};
-                if ~exist('prcDirList','var');   prcDirList = {}; end
-                prcDirList{end+1,1}                         = fullfile(info.prcDir ,['sub-' subList{end}],['ses-' sesList{end}]);
-                if ~exist('bidsDirList','var'); bidsDirList = {}; end
-                if ~exist('bhvrDir','var');         bhvrDir = {}; end
-                if ~exist('phsDir','var');           phsDir = {}; end
-                disp('Copying data from db')
-                forceThis = 0;
-                [bidsDirList{end+1,1},bhvrDir{end+1,1},phsDir{end+1,1}] = ...
-                    db2bids(sesDbListTmp{sub}{ses},subList{end},sesList{end},info,forceThis);
-                [~,acqDate,~] = fileparts(sesDbList{end}); acqDate = strsplit(acqDate,'--'); acqDate = datetime(acqDate{1},'InputFormat','yyyy-MM-dd');
-                if ~exist(bidsDirList{end,1},'dir'); warning(['Did you forget to copy' newline sesDbList{end,1} newline '(aka the MRI source folder)' newline 'to' newline bidsDirList{end,1} newline '(aka the bids folder)?']); end
-
-                % if sub==1 && ses==2; keyboard; end
-                
-                %%% anat
-                dir(fullfile(bidsDirList{end,1},'anat','*.nii.gz'))
-                %%%% avMap
-                if ~exist('avMap','var'); avMap = {}; end
-                avMap{end+1,1}.fList = dir(fullfile(bidsDirList{end,1},'anat','*acq-avMap*.nii.gz'));
-                %%%% memprage
-                if ~exist('memprage','var'); memprage = {}; end
-                memprage{end+1,1}.fList = dir(fullfile(bidsDirList{end,1},'anat','*_T1w.nii.gz'));
-                % if ~isempty(memprage{end,1}.fList)
-                %     tmp = dir(fullfile(info.dbDir,subList{end},'*','fs',subList{end}));
-                %     memprage{end,1}.fsDir = tmp(1).folder; clear tmp
-                % else
-                %     switch subList{end}
-                %         case 'vsmRingP1'
-                %             memprage{end,1}.fsDir = '/autofs/space/takoyaki_001/users/proulxs/vasomo/source/expDb/vsmDrivenP1/2024-07-28--bay2--vsmDrivenP1/fs/vsmDrivenP1';
-                %         otherwise
-                %             warning(['could not find memprage of fsDir for sub-' subList{end} '_ses-' sesList{end} newline 'please specify fsDir'])
-                %     end
-                % end
-                %%%% pcMRA
-                if ~exist('pcMRA','var'); pcMRA = {}; end
-                pcMRA{end+1,1}.fList = dir(fullfile(bidsDirList{end,1},'anat','*acq-pcVenc*.nii.gz'));
-                %%%% tof
-                if ~exist('tof','var'); tof = {}; end
-                tof{end+1,1}.fList = dir(fullfile(bidsDirList{end,1},'anat','*acq-tof*.nii.gz'));
-
-
-                %%% fmap
-                %%%% topup
-                if ~exist('b0','var'); b0 = {}; end
-                b0{end+1,1}.label = 'topup';
-                b0{end,1}.fList = dir(fullfile(bidsDirList{end,1},'fmap','*_epi.nii.gz'));
-                %%%% sa2rage
-                if ~exist('b1','var'); b1 = {}; end
-                b1{end+1,1}.label = 'B1';
-                b1{end,1}.fList = dir(fullfile(bidsDirList{end,1},'fmap','*_TB1SRGE.nii.gz'));
-
-
-                %%% func
-                if ~exist('rCond','var');     rCond = {}; end
-                rCond{end+1,1}   = {};
-                if ~exist('dummyList','var'); dummyList = {}; end
-                dummyList{end+1,1} = {};
-
-                
-                %%%% vfMRI
-                dummy = 5;
-                dir(fullfile(bidsDirList{end,1},'func','*.nii.gz'))
-
-                % remove 50sPrd5sDur
-                % add    50sPrd1sDur
-                % add    20sPrd1sDur
-                % add    05sPrd1sDur
-                % add    06sPrd1sDur
-                % add    08sPrd1sDur
-                % add    eyeOpenRest
-                % add    fixOnly
-
-                % %%%%% 50sPrd5sDur
-                % rCond{end,1}{1,end+1} = runCond;
-                % rCond{end,1}{1,end}.sub  = subList{end};
-                % rCond{end,1}{1,end}.ses  = sesList{end};
-                % rCond{end,1}{1,end}.acq  = 'vfMRI';
-                % rCond{end,1}{1,end}.task = '50sPrd5sDur';
-                % dsgn = runDsgn;
-                % dsgn.task = rCond{end,1}{1,end}.task;
-                % dsgn.dt   = 0.840;
-                % initRest   = dsgn.dt*12;
-                % stimPeriod = dsgn.dt*57;
-                % stimDur    = dsgn.dt*6;
-                % runDur     = dsgn.dt*354;
-                % dsgn.onsetList = initRest:stimPeriod:(runDur-stimPeriod);
-                % dsgn.ondurList = ones(size(dsgn.onsetList)).*(stimDur);
-                % dsgn.cond      = ones(size(dsgn.onsetList));
-                % dsgn.condLabel = {'stim'};
-                % rCond{end,1}{1,end}.dsgn  = dsgn;
-                % rCond{end,1}{1,end}.fList = dir(fullfile(bidsDirList{end,1},'func',['*task-' rCond{end,1}{1,end}.task '*_angio.nii.gz']));
-                % rCond{end,1}{1,end}.fList = fullfile({rCond{end,1}{1,end}.fList.folder},{rCond{end,1}{1,end}.fList.name})';
-                % rCond{end,1}{1,end}.date  = repmat(acqDate,size(rCond{end,1}{1,end}.fList));
-                % dummyList{end,1}{1,end+1} = repmat(dummy,size(rCond{end,1}{1,end}.fList));
-
-                %%%%% 10sPrd1sDur
-                rCond{end,1}{1,end+1} = runCond;
-                rCond{end,1}{1,end}.sub  = subList{end};
-                rCond{end,1}{1,end}.ses  = sesList{end};
-                rCond{end,1}{1,end}.acq  = 'vfMRI';
-                rCond{end,1}{1,end}.task = '10sPrd1sDur';
-                dsgn = runDsgn;
-                dsgn.task = rCond{end,1}{1,end}.task;
-                dsgn.dt   = 0.840;
-                initRest   = dsgn.dt*12;
-                stimPeriod = dsgn.dt*12;
-                stimDur    = dsgn.dt*1;
-                runDur     = dsgn.dt*354;
-                dsgn.onsetList = initRest:stimPeriod:(runDur-stimPeriod);
-                dsgn.ondurList = ones(size(dsgn.onsetList)).*(stimDur);
-                dsgn.cond      = ones(size(dsgn.onsetList));
-                dsgn.condLabel = {'stim'};
-                rCond{end,1}{1,end}.dsgn  = dsgn;
-                rCond{end,1}{1,end}.fList = dir(fullfile(bidsDirList{end,1},'func',['*task-' rCond{end,1}{1,end}.task '*_angio.nii.gz']));
-                rCond{end,1}{1,end}.fList = fullfile({rCond{end,1}{1,end}.fList.folder},{rCond{end,1}{1,end}.fList.name})';
-                rCond{end,1}{1,end}.date  = repmat(acqDate,size(rCond{end,1}{1,end}.fList));
-                dummyList{end,1}{1,end+1} = repmat(dummy,size(rCond{end,1}{1,end}.fList));
-
-                %%%%% 15sPrd1sDur
-                rCond{end,1}{1,end+1} = runCond;
-                rCond{end,1}{1,end}.sub  = subList{end};
-                rCond{end,1}{1,end}.ses  = sesList{end};
-                rCond{end,1}{1,end}.acq  = 'vfMRI';
-                rCond{end,1}{1,end}.task = '15sPrd1sDur';
-                dsgn = runDsgn;
-                dsgn.task = rCond{end,1}{1,end}.task;
-                dsgn.dt   = 0.840;
-                initRest   = dsgn.dt*12;
-                stimPeriod = dsgn.dt*18;
-                stimDur    = dsgn.dt*1;
-                runDur     = dsgn.dt*354;
-                dsgn.onsetList = initRest:stimPeriod:(runDur-stimPeriod);
-                dsgn.ondurList = ones(size(dsgn.onsetList)).*(stimDur);
-                dsgn.cond      = ones(size(dsgn.onsetList));
-                dsgn.condLabel = {'stim'};
-                rCond{end,1}{1,end}.dsgn  = dsgn;
-                rCond{end,1}{1,end}.fList = dir(fullfile(bidsDirList{end,1},'func',['*task-' rCond{end,1}{1,end}.task '*_angio.nii.gz']));
-                rCond{end,1}{1,end}.fList = fullfile({rCond{end,1}{1,end}.fList.folder},{rCond{end,1}{1,end}.fList.name})';
-                rCond{end,1}{1,end}.date  = repmat(acqDate,size(rCond{end,1}{1,end}.fList));
-                dummyList{end,1}{1,end+1} = repmat(dummy,size(rCond{end,1}{1,end}.fList));
-
-                %%%%% 30sPrd1sDur
-                rCond{end,1}{1,end+1} = runCond;
-                rCond{end,1}{1,end}.sub  = subList{end};
-                rCond{end,1}{1,end}.ses  = sesList{end};
-                rCond{end,1}{1,end}.acq  = 'vfMRI';
-                rCond{end,1}{1,end}.task = '30sPrd1sDur';
-                dsgn = runDsgn;
-                dsgn.task = rCond{end,1}{1,end}.task;
-                dsgn.dt   = 0.840;
-                initRest   = dsgn.dt*12;
-                stimPeriod = dsgn.dt*36;
-                stimDur    = dsgn.dt*1;
-                runDur     = dsgn.dt*354;
-                dsgn.onsetList = initRest:stimPeriod:(runDur-stimPeriod);
-                dsgn.ondurList = ones(size(dsgn.onsetList)).*(stimDur);
-                dsgn.cond      = ones(size(dsgn.onsetList));
-                dsgn.condLabel = {'stim'};
-                rCond{end,1}{1,end}.dsgn  = dsgn;
-                rCond{end,1}{1,end}.fList = dir(fullfile(bidsDirList{end,1},'func',['*task-' rCond{end,1}{1,end}.task '*_angio.nii.gz']));
-                rCond{end,1}{1,end}.fList = fullfile({rCond{end,1}{1,end}.fList.folder},{rCond{end,1}{1,end}.fList.name})';
-                rCond{end,1}{1,end}.date  = repmat(acqDate,size(rCond{end,1}{1,end}.fList));
-                dummyList{end,1}{1,end+1} = repmat(dummy,size(rCond{end,1}{1,end}.fList));
-
-                %%%%% 10sPrd50dc
-                rCond{end,1}{1,end+1} = runCond;
-                rCond{end,1}{1,end}.sub  = subList{end};
-                rCond{end,1}{1,end}.ses  = sesList{end};
-                rCond{end,1}{1,end}.acq  = 'vfMRI';
-                rCond{end,1}{1,end}.task = '10sPrd50dc';
-                dsgn = runDsgn;
-                dsgn.task = rCond{end,1}{1,end}.task;
-                dsgn.dt   = 0.840;
-                initRest   = dsgn.dt*12;
-                stimPeriod = dsgn.dt*12;
-                stimDur    = dsgn.dt*6;
-                runDur     = dsgn.dt*354;
-                dsgn.onsetList = initRest:stimPeriod:(runDur-stimPeriod);
-                dsgn.ondurList = ones(size(dsgn.onsetList)).*(stimDur);
-                dsgn.cond      = ones(size(dsgn.onsetList));
-                dsgn.condLabel = {'stim'};
-                rCond{end,1}{1,end}.dsgn  = dsgn;
-                rCond{end,1}{1,end}.fList = dir(fullfile(bidsDirList{end,1},'func',['*task-' rCond{end,1}{1,end}.task '*_angio.nii.gz']));
-                rCond{end,1}{1,end}.fList = fullfile({rCond{end,1}{1,end}.fList.folder},{rCond{end,1}{1,end}.fList.name})';
-                rCond{end,1}{1,end}.date  = repmat(acqDate,size(rCond{end,1}{1,end}.fList));
-                dummyList{end,1}{1,end+1} = repmat(dummy,size(rCond{end,1}{1,end}.fList));
-
-                %%%%% 15sPrd50dc
-                rCond{end,1}{1,end+1} = runCond;
-                rCond{end,1}{1,end}.sub  = subList{end};
-                rCond{end,1}{1,end}.ses  = sesList{end};
-                rCond{end,1}{1,end}.acq  = 'vfMRI';
-                rCond{end,1}{1,end}.task = '15sPrd50dc';
-                dsgn = runDsgn;
-                dsgn.task = rCond{end,1}{1,end}.task;
-                dsgn.dt   = 0.840;
-                initRest   = dsgn.dt*12;
-                stimPeriod = dsgn.dt*18;
-                stimDur    = dsgn.dt*9;
-                runDur     = dsgn.dt*354;
-                dsgn.onsetList = initRest:stimPeriod:(runDur-stimPeriod);
-                dsgn.ondurList = ones(size(dsgn.onsetList)).*(stimDur);
-                dsgn.cond      = ones(size(dsgn.onsetList));
-                dsgn.condLabel = {'stim'};
-                rCond{end,1}{1,end}.dsgn  = dsgn;
-                rCond{end,1}{1,end}.fList = dir(fullfile(bidsDirList{end,1},'func',['*task-' rCond{end,1}{1,end}.task '*_angio.nii.gz']));
-                rCond{end,1}{1,end}.fList = fullfile({rCond{end,1}{1,end}.fList.folder},{rCond{end,1}{1,end}.fList.name})';
-                rCond{end,1}{1,end}.date  = repmat(acqDate,size(rCond{end,1}{1,end}.fList));
-                dummyList{end,1}{1,end+1} = repmat(dummy,size(rCond{end,1}{1,end}.fList));
-
-                %%%%% 30sPrd50dc
-                rCond{end,1}{1,end+1} = runCond;
-                rCond{end,1}{1,end}.sub  = subList{end};
-                rCond{end,1}{1,end}.ses  = sesList{end};
-                rCond{end,1}{1,end}.acq  = 'vfMRI';
-                rCond{end,1}{1,end}.task = '30sPrd50dc';
-                dsgn = runDsgn;
-                dsgn.task = rCond{end,1}{1,end}.task;
-                dsgn.dt   = 0.840;
-                initRest   = dsgn.dt*12;
-                stimPeriod = dsgn.dt*36;
-                stimDur    = dsgn.dt*18;
-                runDur     = dsgn.dt*354;
-                dsgn.onsetList = initRest:stimPeriod:(runDur-stimPeriod);
-                dsgn.ondurList = ones(size(dsgn.onsetList)).*(stimDur);
-                dsgn.cond      = ones(size(dsgn.onsetList));
-                dsgn.condLabel = {'stim'};
-                rCond{end,1}{1,end}.dsgn  = dsgn;
-                rCond{end,1}{1,end}.fList = dir(fullfile(bidsDirList{end,1},'func',['*task-' rCond{end,1}{1,end}.task '*_angio.nii.gz']));
-                rCond{end,1}{1,end}.fList = fullfile({rCond{end,1}{1,end}.fList.folder},{rCond{end,1}{1,end}.fList.name})';
-                rCond{end,1}{1,end}.date  = repmat(acqDate,size(rCond{end,1}{1,end}.fList));
-                dummyList{end,1}{1,end+1} = repmat(dummy,size(rCond{end,1}{1,end}.fList));
-
-
-                %%%% bold
-                dummy = 5;
-                dir(fullfile(bidsDirList{end,1},'func','*.nii.gz'))
-
-                % add 50sPrd1sDur
-                
-                %%%%% 50sPrd5sDur
-                rCond{end,1}{1,end+1} = runCond;
-                rCond{end,1}{1,end}.sub  = subList{end};
-                rCond{end,1}{1,end}.ses  = sesList{end};
-                rCond{end,1}{1,end}.acq  = 'bold';
-                rCond{end,1}{1,end}.task = '50sPrd5sDur';
-                dsgn = runDsgn;
-                dsgn.task = rCond{end,1}{1,end}.task;
-                dsgn.dt   = 0.840;
-                initRest   = dsgn.dt*12;
-                stimPeriod = dsgn.dt*57;
-                stimDur    = dsgn.dt*6;
-                runDur     = dsgn.dt*354;
-                dsgn.onsetList = initRest:stimPeriod:(runDur-stimPeriod);
-                dsgn.ondurList = ones(size(dsgn.onsetList)).*(stimDur);
-                dsgn.cond      = ones(size(dsgn.onsetList));
-                dsgn.condLabel = {'stim'};
-                rCond{end,1}{1,end}.dsgn  = dsgn;
-                rCond{end,1}{1,end}.fList = dir(fullfile(bidsDirList{end,1},'func',['*task-' rCond{end,1}{1,end}.task '*_bold.nii.gz']));
-                rCond{end,1}{1,end}.fList = fullfile({rCond{end,1}{1,end}.fList.folder},{rCond{end,1}{1,end}.fList.name})';
-                rCond{end,1}{1,end}.date  = repmat(acqDate,size(rCond{end,1}{1,end}.fList));
-                dummyList{end,1}{1,end+1} = repmat(dummy,size(rCond{end,1}{1,end}.fList));
-
-
-                %%% behav
-                for rc = 1:length(rCond{end})
-                    if isempty(rCond{end}{rc}.fList) || ismember(rCond{end}{rc}.task,{'eyeOpenRest'})
-                        rCond{end}{rc}.bhvr = [];
-                    else
-                        fileTime = rCond{end}{rc}.date + getAcqTime(rCond{end}{rc}.fList);
-                        % fileTime = rCond{end}{rc}.date + (fileTime - datetime(strcat(cellstr(num2str(year(fileTime),'%04d')),'-',cellstr(num2str(month(fileTime),'%02d')),'-',cellstr(num2str(day(fileTime),'%02d')))));
-                        rCond{end}{rc}.bhvr = parseBehavior_RetinotopicStimulator(fullfile(bhvrDir{end},'vsmDriven.log'),fileTime);
-                    end
-                end
-                assertBehavior_RetinotopicStimulator2(rCond{end})
-
-                
-                
-
-                %%% physio
-                forceThis = 0;
-                phsFile = phsDir{end}; if exist(phsFile,'dir'); phsFile = dir(fullfile(phsDir{end},'*.mat')); phsFile(ismember({phsFile.name},{'manId.mat' 'minCurated.mat'})) = []; end
-                if ~exist('phs','var'); phs = {}; end
-                phs{end+1,1} = [];
-                if ~isempty(phsFile)
-                    phs{end,1} = extractLabChartData3(fullfile(phsFile.folder,phsFile.name),rCond{end},char(phsDir{end}),forceThis);
-                end
-
-            end
-        end
-        % subList
-        % sesList
-        % s = 1;
-        % runCond{s}{:}
-        % pcMRA{s}.fList.name
-        % memprage{s}
-        % avMap{s}
-        % b0{s}.fList.name
-        % b1{s}.fList.name
-
-
     case 'vsmDiamCenSur'
-        info.datasetDir = fullfile(outDir,info.dataSetLabel);
-        info.pipId      = pipId;
-        info.bidsDir    = fullfile(info.datasetDir,'bids');   if ~exist(info.bidsDir,'dir'); mkdir(info.bidsDir); end
-        info.srcDir     = fullfile(info.datasetDir,'source'); if ~exist(info.srcDir ,'dir'); mkdir(info.srcDir ); end
-        info.prcDir     = fullfile(info.datasetDir,'proc');   if ~exist(info.prcDir ,'dir'); mkdir(info.prcDir ); end
+        % % info.datasetDir = fullfile(storageDir,info.dataSetLabel);
+        % info.pipId      = workScript;
+        % info.bidsDir    = fullfile(storageDir,'bids');   if ~exist(info.bidsDir,'dir'); mkdir(info.bidsDir); end
+        % info.srcDir     = fullfile(storageDir,'source'); if ~exist(info.srcDir ,'dir'); mkdir(info.srcDir ); end
+        % info.prcDir     = fullfile(info.datasetDir,'proc');   if ~exist(info.prcDir ,'dir'); mkdir(info.prcDir ); end
         %%% Source data location
-        info.dbDir      = '/space/takoyaki/1/users/proulxs/vasomo/source/expDb';
+        info.dbDir = fullfile(storageDir,'db');
+
+        %%% Preprocessing location
+        info.prcDir = fullfile(scratchDir,workScript,info.dataSetLabel); if ~exist(info.prcDir,'dir'); mkdir(info.prcDir); end
 
         %%% Subject and session info
         sesDbListTmp = {};
@@ -729,10 +166,11 @@ switch info.dataSetLabel
                 [bidsDirList{end+1,1},bhvrDir{end+1,1},phsDir{end+1,1}] = ...
                     db2bids(sesDbListTmp{sub}{ses},subList{end},sesList{end},info,forceThis);
                 [~,acqDate,~] = fileparts(sesDbList{end}); acqDate = strsplit(acqDate,'--'); acqDate = datetime(acqDate{1},'InputFormat','yyyy-MM-dd');
-                if ~exist(bidsDirList{end,1},'dir'); warning(['Did you forget to copy' newline sesDbList{end,1} newline '(aka the MRI source folder)' newline 'to' newline bidsDirList{end,1} newline '(aka the bids folder)?']); end
+                % if ~exist(bidsDirList{end,1},'dir'); warning(['Did you forget to copy' newline sesDbList{end,1} newline '(aka the MRI source folder)' newline 'to' newline bidsDirList{end,1} newline '(aka the bids folder)?']); end
 
                 
                 %%% anat
+                disp('--anat--')
                 dir(fullfile(bidsDirList{end,1},'anat','*.nii.gz'))
                 %%%% avMap
                 if ~exist('avMap','var'); avMap = {}; end
@@ -760,6 +198,8 @@ switch info.dataSetLabel
 
 
                 %%% fmap
+                disp('--fmap--')
+                dir(fullfile(bidsDirList{end,1},'fmap','*.nii.gz'))
                 %%%% topup
                 if ~exist('b0','var'); b0 = {}; end
                 b0{end+1,1}.label = 'topup';
@@ -770,19 +210,19 @@ switch info.dataSetLabel
                 b1{end,1}.fList = dir(fullfile(bidsDirList{end,1},'fmap','*_TB1SRGE.nii.gz'));
 
 
+                
                 %%% func
+                disp('--func--')
+                dir(fullfile(bidsDirList{end,1},'func','*.nii.gz'))
+                
                 if ~exist('rCond','var');     rCond = {}; end
                 rCond{end+1,1}   = {};
                 if ~exist('dummyList','var'); dummyList = {}; end
                 dummyList{end+1,1} = {};
 
 
-
-                
                 %%%% vfMRI
                 dummy = 5;
-                dir(fullfile(bidsDirList{end,1},'func','*.nii.gz'))
-
                 % %%%%% 50sPrd5sDur -- inflow + pc
                 % rCond{end,1}{1,end+1} = runCond;
                 % rCond{end,1}{1,end}.sub  = subList{end};
@@ -1149,7 +589,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-
+return
 
 % for i = 1:length(rCond)
 %     tmp = [rCond{i}{:}];
