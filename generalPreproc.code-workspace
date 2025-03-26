@@ -5,6 +5,12 @@
 		},
 		{
 			"path": "../../tools/bassReg2"
+		},
+		{
+			"path": "../../tools/util"
+		},
+		{
+			"path": "../../../../scratch/users/sebp/doIt_generalPreproc/vsmDiamCenSur"
 		}
 	],
 	"settings": {}

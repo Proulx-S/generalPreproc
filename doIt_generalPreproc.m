@@ -36,6 +36,9 @@ addpath(genpath(fullfile(toolDir,tool)))
 tool = 'vasomoTools'; toolURL = 'https://github.com/Proulx-S/vasomoTools.git';
 if ~exist(fullfile(toolDir, tool), 'dir'); system(['git clone ' toolURL ' ' fullfile(toolDir, tool)]); end
 addpath(genpath(fullfile(toolDir,tool)))
+tool = 'util';    toolURL = 'https://github.com/Proulx-S/util.git';
+if ~exist(fullfile(toolDir, tool), 'dir'); system(['git clone ' toolURL ' ' fullfile(toolDir, tool)]); end
+addpath(genpath(fullfile(toolDir,tool)))
 tool = 'chronux';     toolURL = 'https://github.com/Proulx-S/chronux';
 if ~exist(fullfile(toolDir, tool), 'dir'); system(['git clone ' toolURL ' ' fullfile(toolDir, tool)]); end
 addpath(genpath(fullfile(toolDir,'chronux/chronux_2_12/modified')))
@@ -96,8 +99,8 @@ end
 % %%%%%%%%%%%%%%%%%%
 % %% %%%%%%%%%%%%%%%
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Variables, Paths and stim/acq info %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Variables, Paths and stim/acq info
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 info.dataSetLabel = 'vsmDiamCenSur'; % 'vsmRing' 'vsmDriven' 'vsmDiamCenSur'
 
@@ -585,7 +588,7 @@ switch info.dataSetLabel
         dbstack; error('code that')
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%
-%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 
@@ -597,9 +600,9 @@ end
 % end
 
 
-%%%%%%%%%%%%%%%%%%%
-%% Preprocessing %%
-%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%
+%% Preprocessing
+%%%%%%%%%%%%%%%%
 if 1
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -608,7 +611,7 @@ if 1
     runSet  = cell(size(rCond));
     volAnat = cell(size(rCond));
 
-    sesIndList = 1:length(subList);
+    sesIndList = 14%:length(subList);
     for s = 1:length(subList(sesIndList))
         S = sesIndList(s);
 
@@ -655,7 +658,7 @@ if 1
                 setList = [rCond{S}{:}]; setList = unique({setList.acq}');
 
                 %%% Initiate data
-                forceThis   = 0;
+                forceThis   = 1;
                 verboseThis = 1;
                 skipMask    = 1;
                 for rs = 1:length(setList)
@@ -1161,7 +1164,7 @@ else
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 end
-%% %%%%%%%%%%%%%%%%
+%% %%%%%%%%%%%%%
 
 
 
