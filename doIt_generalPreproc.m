@@ -102,7 +102,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Variables, Paths and stim/acq info
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-info.dataSetLabel = 'vsmDiamCenSur'; % 'vsmRing' 'vsmDriven' 'vsmDiamCenSur'
+info.dataSetLabel = 'vsmDiamCenSur';
 
 switch info.dataSetLabel
     case 'vsmDiamCenSur'
@@ -224,37 +224,6 @@ switch info.dataSetLabel
 
                 %%%% vfMRI
                 dummy = 5;
-                % %%%%% 50sPrd5sDur -- inflow + pc
-                % rCond{end,1}{1,end+1} = runCond;
-                % rCond{end,1}{1,end}.sub  = subList{end};
-                % rCond{end,1}{1,end}.ses  = sesList{end};
-                % rCond{end,1}{1,end}.acq  = 'vfMRI';
-                % rCond{end,1}{1,end}.task = '50sPrd5sDur';
-                % dsgn = runDsgn;
-                % dsgn.task = rCond{end,1}{1,end}.task;
-                % dsgn.dt   = 0.840;
-                % initRest   = dsgn.dt*12;
-                % stimPeriod = dsgn.dt*57;
-                % stimDur    = dsgn.dt*6;
-                % runDur     = dsgn.dt*354;
-                % dsgn.onsetList = initRest:stimPeriod:(runDur-stimPeriod);
-                % dsgn.ondurList = ones(size(dsgn.onsetList)).*(stimDur);
-                % dsgn.cond      = ones(size(dsgn.onsetList));
-                % dsgn.condLabel = {'stim'};
-                % rCond{end,1}{1,end}.dsgn  = dsgn;
-                % fListAcq  = dir(fullfile(dirs{end,1}.bids,'func',['*_acq-'  rCond{end,1}{1,end}.acq '*_angio.nii.gz']));
-                % fListTask = dir(fullfile(dirs{end,1}.bids,'func',['*_task-' rCond{end,1}{1,end}.task     '_*.nii.gz']));
-                % fList     = intersect(fullfile({fListAcq.folder },{fListAcq.name })',fullfile({fListTask.folder},{fListTask.name})');
-                % % fListAcq  = dir(fullfile(dirs{end,1}.bids,'func',['*_acq-pcVenc7z*_angio.nii.gz']));
-                % % fListRec  = dir(fullfile(dirs{end,1}.bids,'func',['*_rec-venc0_*_angio.nii.gz']));
-                % % fListTask = dir(fullfile(dirs{end,1}.bids,'func',['*_task-' rCond{end,1}{1,end}.task     '_*.nii.gz']));
-                % % fList2     = intersect(fullfile({fListAcq.folder },{fListAcq.name })',fullfile({fListRec.folder },{fListRec.name })');
-                % % fList2     = intersect(fList2,fullfile({fListTask.folder},{fListTask.name})');
-                % % fList = cat(1,fList,fList2);
-                % rCond{end,1}{1,end}.fList = {};
-                % if ~isempty(fList); rCond{end,1}{1,end}.fList = fList; end
-                % rCond{end,1}{1,end}.date  = repmat(acqDate,size(rCond{end,1}{1,end}.fList));
-                % dummyList{end,1}{1,end+1} = repmat(dummy,size(rCond{end,1}{1,end}.fList));
 
                 %%%%% 50sPrd5sDur -- inflow
                 rCond{end,1}{1,end+1} = runCond;
