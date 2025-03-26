@@ -600,6 +600,45 @@ end
 % end
 
 
+%%%%%%%%%%%%%%%%%
+%% Initalize data
+%%%%%%%%%%%%%%%%%
+forceThis   = 1;
+verboseThis = 1;
+skipMask    = 1;
+
+runSet  = cell(size(rCond));
+volAnat = cell(size(rCond));
+
+sesIndList = 1:length(subList);
+for s = 1:length(subList(sesIndList))
+    S = sesIndList(s);
+    setList = [rCond{S}{:}]; setList = unique({setList.acq}');
+
+    for rs = 1:length(setList)
+        runSet{S}{1,end+1}.info = info;
+        runSet{S}{end}.sub      = subList{S};
+        runSet{S}{end}.ses      = sesList{S};
+        runSet{S}{end}.label    = setList{rs};
+        ind = [rCond{S}{:}]; ind = {ind.acq}; ind = ismember(ind,runSet{S}{end}.label);
+        runSet{S}{end}.fList = [rCond{S}{ind}];
+        runSet{S}{end}.date   = cat(1,runSet{S}{end}.fList.date);
+        runSet{S}{end}.fList  = cat(1,runSet{S}{end}.fList.fList);
+        runSet{S}{end}.nDummy = cat(1,dummyList{S}{ind});
+
+        if ~isempty(runSet{S}{end}.fList)
+            runSet{S}{end} = initPreproc3(runSet{S}{end},[],[],skipMask,forceThis,verboseThis);
+        end
+    end
+end
+
+
+return
+
+
+
+%% %%%%%%%%%%%%%%
+
 %%%%%%%%%%%%%%%%
 %% Preprocessing
 %%%%%%%%%%%%%%%%
