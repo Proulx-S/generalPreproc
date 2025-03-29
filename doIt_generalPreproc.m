@@ -44,7 +44,6 @@ addpath(genpath(fullfile(toolDir,'chronux/chronux_2_12/modified')))
 tool = 'fieldtrip';   toolURL = 'https://github.com/fieldtrip/fieldtrip';
 if ~exist(fullfile(toolDir, tool), 'dir'); system(['git clone ' toolURL ' ' fullfile(toolDir, tool)]); end
 addpath(genpath(fullfile(toolDir,'fieldtrip/external/freesurfer')))
-addpath(genpath(fullfile(toolDir,'freehanddraw')))
 %%% neurodesk
 switch envId
     case 1
