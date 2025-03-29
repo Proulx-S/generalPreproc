@@ -12,20 +12,19 @@ user = char(java.lang.System.getProperty('user.name'));
 
 % Configure paths accordingly
 if strcmp(os,'Linux') && strcmp(host,'takoyaki') && strcmp(user,'sebp')
-    storageDir = '/local/users/sebp/';
-    scratchDir = '/scratch/users/sebp/';
-    toolDir    = '~/tools';
+    storageDir = '/local/users/Proulx-S/';
+    scratchDir = '/scratch/users/Proulx-S/';
+    toolDir    = fullfile(getenv('HOME'),'tools');
     workScript = mfilename;
     workFile   = [workScript '.mat'];
-    workDir    = fullfile('~/work/generalPreproc/',workScript); if ~exist(workDir,'dir'); mkdir(workDir); end
+    workDir    = fullfile(getenv('HOME'),'/work/generalPreproc/',workScript); if ~exist(workDir,'dir'); mkdir(workDir); end
     workFile   = fullfile(fileparts(workDir),workFile);
     envId      = 1;
+    setenv('SINGULARITY_BINDPATH',strjoin({storageDir scratchDir toolDir workDir},','));
 else
     dbstack; error('not implemented')
 end
 
-
-addpath(genpath('/space/takoyaki/1/users/proulxs/tools/bassReg2'))
 
 % Load dependencies
 %%% matlab
@@ -45,6 +44,7 @@ addpath(genpath(fullfile(toolDir,'chronux/chronux_2_12/modified')))
 tool = 'fieldtrip';   toolURL = 'https://github.com/fieldtrip/fieldtrip';
 if ~exist(fullfile(toolDir, tool), 'dir'); system(['git clone ' toolURL ' ' fullfile(toolDir, tool)]); end
 addpath(genpath(fullfile(toolDir,'fieldtrip/external/freesurfer')))
+addpath(genpath(fullfile(toolDir,'freehanddraw')))
 %%% neurodesk
 switch envId
     case 1
@@ -66,8 +66,6 @@ switch envId
         %     setenv("PATH",getenv("PATH") + neurodeskModule{i});
         % end
 end
-
-
 
 
 
@@ -97,11 +95,11 @@ end
 % srcFs = 'source /usr/local/freesurfer/fs-stable741-env-autoselect';
 % srcAfni = 'export PATH=$PATH:/usr/pubsw/packages/AFNI/23.1.05';
 % %%%%%%%%%%%%%%%%%%
-% %% %%%%%%%%%%%%%%%
+%% %%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Variables, Paths and stim/acq info
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 info.dataSetLabel = 'vsmDiamCenSur';
 
 switch info.dataSetLabel
@@ -559,8 +557,6 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-
-
 % for i = 1:length(rCond)
 %     tmp = [rCond{i}{:}];
 %     [{tmp.sub}
@@ -572,14 +568,14 @@ end
 %%%%%%%%%%%%%%%%%
 %% Initalize data
 %%%%%%%%%%%%%%%%%
-forceThis   = 1;
+forceThis   = 0;
 verboseThis = 1;
 skipMask    = 1;
 
 runSet  = cell(size(rCond));
 volAnat = cell(size(rCond));
 
-sesIndList = 1:length(subList);
+sesIndList = 14%:length(subList);
 for s = 1:length(subList(sesIndList))
     S = sesIndList(s);
     setList = [rCond{S}{:}]; setList = unique({setList.acq}');
@@ -594,19 +590,125 @@ for s = 1:length(subList(sesIndList))
         runSet{S}{end}.date   = cat(1,runSet{S}{end}.fList.date);
         runSet{S}{end}.fList  = cat(1,runSet{S}{end}.fList.fList);
         runSet{S}{end}.nDummy = cat(1,dummyList{S}{ind});
+        runSet{S}{end}.dbDir  = sesDbList{S};
 
         if ~isempty(runSet{S}{end}.fList)
             runSet{S}{end} = initPreproc3(runSet{S}{end},[],[],skipMask,forceThis,verboseThis);
         end
     end
 end
-
-
+%% %%%%%%%%%%%%%%
 return
 
 
+%%%%%%%%%%%%%%%%%
+%% Draw all masks
+%%%%%%%%%%%%%%%%%
+forceThis   = 1;
+verboseThis = 1;
+sesIndList = 14%:length(subList);
 
+%%% Copy to neurocloud and use freeview there
+cmd = {};
+cmd{end+1} = src.fs;
+for s = 1:length(subList(sesIndList))
+    S = sesIndList(s);
+    setList = [rCond{S}{:}]; setList = unique({setList.acq}');
+    for rs = 1:length(runSet{S})
+        if isempty(runSet{S}{rs}.fList); continue; end
+        
+        fBase = runSet{S}{rs}.initFiles.fPlumbSmr.sesCat.runAv.fList{1};
+        fMask = replace(fBase,'_volTs.nii.gz','_volBrainMaskInv.nii.gz');
+        runSet{S}{rs}.fMasks.fMaskInv = fMask;
+        if forceThis || ~exist(fMask,'file')
+            mri     = MRIread(fBase,1);
+            mri.vol = ones(mri.volsize);
+            MRIwrite(mri,fMask);
+            cmd{end+1} = ['scp sebp@takoyaki1:' fMask ' sebp@takoyaki1:' fBase ' .'];
+            cmd{end+1} = 'echo draw EXCLUSION mask for the BRAIN (brain=0, nonBrain=1)';
+            cmd{end+1} = 'freeview -v \';
+            cmd{end+1} = [replace(fBase,[fileparts(fBase) filesep],'./') ' \'];
+            cmd{end+1} = [replace(fMask,[fileparts(fMask) filesep],'./') ':colormap=heat:opacity=0.5'];
+            cmd{end+1} = ['scp ' replace(fMask,[fileparts(fMask) filesep],'./') ' sebp@takoyaki1:' fMask ''];
+        end
+    end
+end
+clipboard('copy',strjoin(cmd,newline));
+disp('++++++++++++++++++++++++++++++++++++++++')
+disp('Command for mask creation is in clipboard.')
+disp('Paste in freeview capable remote to transfer data, create masks and transfer back.')
+%%% Wait for user to confirm mask drawing is done
+done = '';
+while ~strcmpi(done, 'done')
+    disp('When done, type "done"')
+    done = input('', 's');
+end
+disp('++++++++++++++++++++++++++++++++++++++++')
+
+%%% Invert mask
+for s = 1:length(subList(sesIndList))
+    S = sesIndList(s);
+    setList = [rCond{S}{:}]; setList = unique({setList.acq}');
+    for rs = 1:length(runSet{S})
+        if isempty(runSet{S}{rs}.fList); continue; end
+        mri = MRIread(runSet{S}{rs}.fMasks.fMaskInv);
+        mri.vol = 1-mri.vol;
+        runSet{S}{rs}.fMasks.fMask = replace(runSet{S}{rs}.fMasks.fMaskInv,'Inv.nii.gz','.nii.gz');
+        MRIwrite(mri,runSet{S}{rs}.fMasks.fMask);
+        % figure('WindowStyle','docked');
+        % imagesc(mri.vol(:,:,:,1),[0 1]);
+        % ax = gca; ax.Colormap = gray; ax.DataAspectRatio = [1 1 1];
+        % ax.YTick = []; ax.XTick = []; ax.Padding = 'tight';
+    end
+end
+
+        
+% for s = 1:length(subList(sesIndList))
+%     S = sesIndList(s);
+%     setList = [rCond{S}{:}]; setList = unique({setList.acq}');
+
+%     for rs = 1:length(runSet{S})
+        
+%         %% MATLAB DRAWING TOOLS -- too slow
+%         %%% Read MRI
+%         mri = MRIread(runSet{S}{end}.initFiles.fPlumbSmr.sesCat.runAv.fList{1});
+%         figure('WindowStyle','docked');
+%         imagesc(mri.vol(:,:,:,1),[0 800]);
+%         ax = gca; ax.Colormap = gray; ax.DataAspectRatio = [1 1 1];
+%         ax.YTick = []; ax.XTick = []; ax.Padding = 'tight';
+        
+%         %%% Ask user to zoom to satisfaction
+%         disp('zoom to satisfaction then press any key')
+%         pause
+
+%         %%% Ask user to draw and repeat to satisfaction
+%         satisfied = 0;
+%         while ~satisfied
+%             disp('outline brain roi in one go')
+%             h = drawfreehand(ax);
+%             disp('satisfied? (1 for yes, 0 for no)')
+%             satisfied = input('');
+%             if ~satisfied
+%                 delete(h);
+%             end
+%         end
+
+%         %%% Convert drawing to mask
+%         [x, y] = meshgrid(1:size(mri.vol(:,:,:,1),2), 1:size(mri.vol(:,:,:,1),1));
+%         mask = reshape(isinterior(polyshape(round(h.Position(:,1)), round(h.Position(:,2))), x(:), y(:)), size(mri.vol(:,:,:,1)));
+%         delete(h);
+%         if verboseThis>=1
+%             fMask = figure('WindowStyle','docked');
+%             imagesc(mask);
+%             axMask = gca; axMask.Colormap = gray; axMask.DataAspectRatio = [1 1 1];
+%             axMask.YTick = []; axMask.XTick = []; axMask.Padding = 'tight';
+%             axMask.XLim = ax.XLim; axMask.YLim = ax.YLim;
+%         end
+%         %%% Save mask to nii
+%     end
+% end
 %% %%%%%%%%%%%%%%
+
 
 %%%%%%%%%%%%%%%%
 %% Preprocessing

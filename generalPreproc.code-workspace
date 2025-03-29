@@ -10,7 +10,7 @@
 			"path": "../../tools/util"
 		},
 		{
-			"path": "../../../../scratch/users/sebp/doIt_generalPreproc/vsmDiamCenSur"
+			"path": "../../tools/vasomoTools"
 		}
 	],
 	"settings": {}
