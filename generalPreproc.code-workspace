@@ -11,6 +11,9 @@
 		},
 		{
 			"path": "../../tools/vasomoTools"
+		},
+		{
+			"path": "../../../../local/users/Proulx-S/db"
 		}
 	],
 	"settings": {}

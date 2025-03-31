@@ -141,6 +141,9 @@ switch info.dataSetLabel
 
         sesDbListTmp{end+1,1}{    1,1} = fullfile(info.dbDir,'vsmDiamCenSurP4/2025-01-20--bay2--vsmDiamCenSurP4');
 
+        sesDbListTmp{end+1,1}{    1,1} = fullfile(info.dbDir,'vsmDiamCenSurP5/2025-01-23--bay2--vsmDiamCenSurP5');
+        
+
         % sub-5 ses-1: synchronization to physio is done with vfMRI and
         % bold runs, which have different trigger shape (volTr vs rfTr).
         % The alignment is not so bad anyway, but one should fix the issue
@@ -160,11 +163,17 @@ switch info.dataSetLabel
                 prcDirList{end+1,1}                         = fullfile(info.prcDir ,['sub-' subList{end}],['ses-' sesList{end}]);
                 if ~exist('dirs','var');               dirs = {}; end
                 if ~exist('dirsOrig','var');       dirsOrig = {}; end
+                
+                if ~exist('rCond','var');     rCond = {}; end
+                rCond{end+1,1}   = {};
+                % if ~exist('dummyList','var'); dummyList = {}; end
+                % dummyList{end+1,1} = {};
+
                 disp('Copying data from db')
                 forceThis = 0;
                 [dirs{end+1,1},dirsOrig{end+1,1}] = db2bids(sesDbListTmp{sub}{ses},subList{end},sesList{end},info,forceThis);
                 [~,acqDate,~] = fileparts(sesDbList{end}); acqDate = strsplit(acqDate,'--'); acqDate = datetime(acqDate{1},'InputFormat','yyyy-MM-dd');
-                % if ~exist(dirs{end,1}.bids,'dir'); warning(['Did you forget to copy' newline sesDbList{end,1} newline '(aka the MRI source folder)' newline 'to' newline dirs{end,1}.bids newline '(aka the bids folder)?']); end
+                
 
                 
                 %%% anat
@@ -213,21 +222,18 @@ switch info.dataSetLabel
                 disp('--func--')
                 dir(fullfile(dirs{end,1}.bids,'func','*.nii.gz'))
                 
-                if ~exist('rCond','var');     rCond = {}; end
-                rCond{end+1,1}   = {};
-                if ~exist('dummyList','var'); dummyList = {}; end
-                dummyList{end+1,1} = {};
-
 
                 %%%% vfMRI
                 dummy = 5;
 
                 %%%%% 50sPrd5sDur -- inflow
                 rCond{end,1}{1,end+1} = runCond;
-                rCond{end,1}{1,end}.sub  = subList{end};
-                rCond{end,1}{1,end}.ses  = sesList{end};
-                rCond{end,1}{1,end}.acq  = 'vfMRI';
-                rCond{end,1}{1,end}.task = '50sPrd5sDur';
+                rCond{end,1}{1,end}.dirs     = dirs{end,1};
+                rCond{end,1}{1,end}.dirsOrig = dirsOrig{end,1};
+                rCond{end,1}{1,end}.sub      = subList{end};
+                rCond{end,1}{1,end}.ses      = sesList{end};
+                rCond{end,1}{1,end}.acq      = 'vfMRI';
+                rCond{end,1}{1,end}.task     = '50sPrd5sDur';
                 dsgn = runDsgn;
                 dsgn.task = rCond{end,1}{1,end}.task;
                 dsgn.dt   = 0.840;
@@ -246,13 +252,15 @@ switch info.dataSetLabel
                 rCond{end,1}{1,end}.fList = {};
                 if ~isempty(fList); rCond{end,1}{1,end}.fList = fList; end
                 rCond{end,1}{1,end}.date  = repmat(acqDate,size(rCond{end,1}{1,end}.fList));
-                dummyList{end,1}{1,end+1} = repmat(dummy,size(rCond{end,1}{1,end}.fList));
+                rCond{end,1}{1,end}.nDummy = repmat(dummy,size(rCond{end,1}{1,end}.fList));
                 
                 %%%%% 50sPrd5sDur -- pc
                 rCond{end,1}{1,end+1} = runCond;
-                rCond{end,1}{1,end}.sub  = subList{end};
-                rCond{end,1}{1,end}.ses  = sesList{end};
-                rCond{end,1}{1,end}.acq  = 'vfMRIpc';
+                rCond{end,1}{1,end}.dirs     = dirs{end,1};
+                rCond{end,1}{1,end}.dirsOrig = dirsOrig{end,1};
+                rCond{end,1}{1,end}.sub      = subList{end};
+                rCond{end,1}{1,end}.ses      = sesList{end};
+                rCond{end,1}{1,end}.acq      = 'vfMRIpc';
                 rCond{end,1}{1,end}.task = '50sPrd5sDur';
                 dsgn = runDsgn;
                 dsgn.task = rCond{end,1}{1,end}.task;
@@ -290,10 +298,12 @@ switch info.dataSetLabel
                     rCond{end,1}{1,end}.fList = cat(2,fList,fListDiffMag,fListDiffPhase);
                 end
                 rCond{end,1}{1,end}.date  = repmat(acqDate,size(rCond{end,1}{1,end}.fList,1),1);
-                dummyList{end,1}{1,end+1} = repmat(dummy  ,size(rCond{end,1}{1,end}.fList,1),1);
+                rCond{end,1}{1,end}.nDummy = repmat(dummy  ,size(rCond{end,1}{1,end}.fList,1),1);
 
                 %%%%% 50sPrd5sDur -- pc (highVenc)
                 rCond{end,1}{1,end+1} = runCond;
+                rCond{end,1}{1,end}.dirs     = dirs{end,1};
+                rCond{end,1}{1,end}.dirsOrig = dirsOrig{end,1};
                 rCond{end,1}{1,end}.sub  = subList{end};
                 rCond{end,1}{1,end}.ses  = sesList{end};
                 rCond{end,1}{1,end}.acq  = 'vfMRIpc';
@@ -334,10 +344,12 @@ switch info.dataSetLabel
                     rCond{end,1}{1,end}.fList = cat(2,fList,fListDiffMag,fListDiffPhase);
                 end
                 rCond{end,1}{1,end}.date  = repmat(acqDate,size(rCond{end,1}{1,end}.fList,1),1);
-                dummyList{end,1}{1,end+1} = repmat(dummy  ,size(rCond{end,1}{1,end}.fList,1),1);
+                rCond{end,1}{1,end}.nDummy = repmat(dummy  ,size(rCond{end,1}{1,end}.fList,1),1);
 
                 %%%%% 50sPrd10sDur -- inflow
                 rCond{end,1}{1,end+1} = runCond;
+                rCond{end,1}{1,end}.dirs     = dirs{end,1};
+                rCond{end,1}{1,end}.dirsOrig = dirsOrig{end,1};
                 rCond{end,1}{1,end}.sub  = subList{end};
                 rCond{end,1}{1,end}.ses  = sesList{end};
                 rCond{end,1}{1,end}.acq  = 'vfMRI';
@@ -360,10 +372,12 @@ switch info.dataSetLabel
                 rCond{end,1}{1,end}.fList = {};
                 if ~isempty(fList); rCond{end,1}{1,end}.fList = fList; end
                 rCond{end,1}{1,end}.date  = repmat(acqDate,size(rCond{end,1}{1,end}.fList));
-                dummyList{end,1}{1,end+1} = repmat(dummy,size(rCond{end,1}{1,end}.fList));
+                rCond{end,1}{1,end}.nDummy = repmat(dummy,size(rCond{end,1}{1,end}.fList));
 
                 %%%%% 50sPrd10sDur -- pc
                 rCond{end,1}{1,end+1} = runCond;
+                rCond{end,1}{1,end}.dirs     = dirs{end,1};
+                rCond{end,1}{1,end}.dirsOrig = dirsOrig{end,1};
                 rCond{end,1}{1,end}.sub  = subList{end};
                 rCond{end,1}{1,end}.ses  = sesList{end};
                 rCond{end,1}{1,end}.acq  = 'vfMRIpc';
@@ -401,7 +415,7 @@ switch info.dataSetLabel
                     rCond{end,1}{1,end}.fList = cat(2,fList,fListDiffMag,fListDiffPhase);
                 end
                 rCond{end,1}{1,end}.date  = repmat(acqDate,size(rCond{end,1}{1,end}.fList,1),1);
-                dummyList{end,1}{1,end+1} = repmat(dummy  ,size(rCond{end,1}{1,end}.fList,1),1);
+                rCond{end,1}{1,end}.nDummy = repmat(dummy  ,size(rCond{end,1}{1,end}.fList,1),1);
                 
 
                 %%%% bold
@@ -410,6 +424,8 @@ switch info.dataSetLabel
 
                 %%%%% 50sPrd5sDur
                 rCond{end,1}{1,end+1} = runCond;
+                rCond{end,1}{1,end}.dirs     = dirs{end,1};
+                rCond{end,1}{1,end}.dirsOrig = dirsOrig{end,1};
                 rCond{end,1}{1,end}.sub  = subList{end};
                 rCond{end,1}{1,end}.ses  = sesList{end};
                 rCond{end,1}{1,end}.acq  = 'bold';
@@ -429,10 +445,12 @@ switch info.dataSetLabel
                 rCond{end,1}{1,end}.fList = dir(fullfile(dirs{end,1}.bids,'func',['*task-' rCond{end,1}{1,end}.task '*_bold.nii.gz']));
                 rCond{end,1}{1,end}.fList = fullfile({rCond{end,1}{1,end}.fList.folder},{rCond{end,1}{1,end}.fList.name})';
                 rCond{end,1}{1,end}.date  = repmat(acqDate,size(rCond{end,1}{1,end}.fList));
-                dummyList{end,1}{1,end+1} = repmat(dummy,size(rCond{end,1}{1,end}.fList));
+                rCond{end,1}{1,end}.nDummy = repmat(dummy,size(rCond{end,1}{1,end}.fList));
 
                 %%%%% 50sPrd10sDur
                 rCond{end,1}{1,end+1} = runCond;
+                rCond{end,1}{1,end}.dirs     = dirs{end,1};
+                rCond{end,1}{1,end}.dirsOrig = dirsOrig{end,1};
                 rCond{end,1}{1,end}.sub  = subList{end};
                 rCond{end,1}{1,end}.ses  = sesList{end};
                 rCond{end,1}{1,end}.acq  = 'bold';
@@ -457,10 +475,12 @@ switch info.dataSetLabel
                 % rCond{end,1}{1,end}.fList = dir(fullfile(dirs{end,1}.bids,'func',['*task-' rCond{end,1}{1,end}.task '*_angio.nii.gz']));
                 % rCond{end,1}{1,end}.fList = fullfile({rCond{end,1}{1,end}.fList.folder},{rCond{end,1}{1,end}.fList.name})';
                 rCond{end,1}{1,end}.date  = repmat(acqDate,size(rCond{end,1}{1,end}.fList));
-                dummyList{end,1}{1,end+1} = repmat(dummy,size(rCond{end,1}{1,end}.fList));
+                rCond{end,1}{1,end}.nDummy = repmat(dummy,size(rCond{end,1}{1,end}.fList));
 
                 %%%%% 50sPrd1sDur
                 rCond{end,1}{1,end+1} = runCond;
+                rCond{end,1}{1,end}.dirs     = dirs{end,1};
+                rCond{end,1}{1,end}.dirsOrig = dirsOrig{end,1};
                 rCond{end,1}{1,end}.sub  = subList{end};
                 rCond{end,1}{1,end}.ses  = sesList{end};
                 rCond{end,1}{1,end}.acq  = 'bold';
@@ -480,7 +500,7 @@ switch info.dataSetLabel
                 rCond{end,1}{1,end}.fList = dir(fullfile(dirs{end,1}.bids,'func',['*task-' rCond{end,1}{1,end}.task '*_bold.nii.gz']));
                 rCond{end,1}{1,end}.fList = fullfile({rCond{end,1}{1,end}.fList.folder},{rCond{end,1}{1,end}.fList.name})';
                 rCond{end,1}{1,end}.date  = repmat(acqDate,size(rCond{end,1}{1,end}.fList));
-                dummyList{end,1}{1,end+1} = repmat(dummy,size(rCond{end,1}{1,end}.fList));
+                rCond{end,1}{1,end}.nDummy = repmat(dummy,size(rCond{end,1}{1,end}.fList));
 
 
                 %%% Assert we are not missing any funcitonal files
@@ -564,6 +584,47 @@ end
 % end
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Assert bids structure is well defined
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+for RS = 1:length(rCond)
+    [S,str] = assertBids(rCond{RS});
+
+    %%% Correct special cases
+    if isempty(S); continue; end
+    for s = 1:length(S)
+        switch str{s}
+            case 'sub-vsmDiamCenSurP2_ses-1_acq-vfMRI_task-50sPrd5sDur'
+                % ignore this naming difference
+            case 'sub-vsmDiamCenSurP9_ses-1_acq-vfMRI_task-50sPrd5sDur'
+                % split the two different slice presciptions
+                if ~isempty(rCond{RS}{S(s)}.prsc); continue; end
+                ind = [2 2 2 1 1];
+                rCond{RS}{end+1} = rCond{RS}{S(s)};
+                rCond{RS}{S(s)}.prsc = 'default';
+                rCond{RS}{S(s)}.fList(ind~=1)  = [];
+                rCond{RS}{S(s)}.date(ind~=1)   = [];
+                rCond{RS}{S(s)}.bhvr(ind~=1)   = [];
+                rCond{RS}{S(s)}.nDummy(ind~=1) = [];
+                rCond{RS}{end}.prsc = 'back7';
+                rCond{RS}{end}.fList(ind~=2)  = [];
+                rCond{RS}{end}.date(ind~=2)   = [];
+                rCond{RS}{end}.bhvr(ind~=2)   = [];
+                rCond{RS}{end}.nDummy(ind~=2) = [];
+            otherwise
+                dbstack; error('please specify how to deal with that special case')
+        end
+    end
+end
+
+% whos
+% for RS = 1:length(rCond)
+%     assertBids(rCond{RS});
+% end
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
 %%%%%%%%%%%%%%%%%
 %% Initalize data
 %%%%%%%%%%%%%%%%%
@@ -574,9 +635,20 @@ skipMask    = 1;
 runSet  = cell(size(rCond));
 volAnat = cell(size(rCond));
 
-sesIndList = 14%:length(subList);
+sesIndList = 1:length(subList);
 for s = 1:length(subList(sesIndList))
     S = sesIndList(s);
+
+    
+    
+    
+    if S==14
+        forceThis = 1;
+    end
+
+
+    
+
     setList = [rCond{S}{:}]; setList = unique({setList.acq}');
 
     for rs = 1:length(setList)

@@ -42,5 +42,5 @@ octave-workspace
 *.nii.gz
 
 # Cursor
-.cursorignore
-.code-workspace
+*.cursorignore
+*.code-workspace
