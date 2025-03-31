@@ -601,7 +601,7 @@ for RS = 1:length(rCond)
                 if ~isempty(rCond{RS}{S(s)}.prsc); continue; end
                 ind = [2 2 2 1 1];
                 rCond{RS}{end+1} = rCond{RS}{S(s)};
-                rCond{RS}{S(s)}.prsc = 'default';
+                rCond{RS}{S(s)}.prsc = [];
                 rCond{RS}{S(s)}.fList(ind~=1)  = [];
                 rCond{RS}{S(s)}.date(ind~=1)   = [];
                 rCond{RS}{S(s)}.bhvr(ind~=1)   = [];
@@ -628,43 +628,55 @@ end
 %%%%%%%%%%%%%%%%%
 %% Initalize data
 %%%%%%%%%%%%%%%%%
-forceThis   = 0;
+forceThis   = 1;
 verboseThis = 1;
 skipMask    = 1;
 
 runSet  = cell(size(rCond));
 volAnat = cell(size(rCond));
 
-sesIndList = 1:length(subList);
+sesIndList = 14;
+% sesIndList = 1:length(subList);
 for s = 1:length(subList(sesIndList))
     S = sesIndList(s);
 
-    
-    
-    
-    if S==14
-        forceThis = 1;
-    end
-
-
+    setList = [rCond{S}{:}];
+    acqList  = {setList.acq}';
+    prscList = {setList.prsc}'; prscList(cellfun('isempty',prscList)) = {'dflt'};
+    [setList,b,c] = unique(strcat('acq-',acqList,'_','prsc-',prscList));
+    setList = [strcat('acq-',acqList(b)) strcat('prsc-',prscList(b))];
     
 
-    setList = [rCond{S}{:}]; setList = unique({setList.acq}');
-
-    for rs = 1:length(setList)
+    for rs = 1:size(setList,1)
         runSet{S}{1,end+1}.info = info;
         runSet{S}{end}.sub      = subList{S};
         runSet{S}{end}.ses      = sesList{S};
-        runSet{S}{end}.label    = setList{rs};
-        ind = [rCond{S}{:}]; ind = {ind.acq}; ind = ismember(ind,runSet{S}{end}.label);
-        runSet{S}{end}.fList = [rCond{S}{ind}];
-        runSet{S}{end}.date   = cat(1,runSet{S}{end}.fList.date);
-        runSet{S}{end}.fList  = cat(1,runSet{S}{end}.fList.fList);
-        runSet{S}{end}.nDummy = cat(1,dummyList{S}{ind});
+        runSet{S}{end}.label    = strjoin(setList(rs,:),'_');
+
+        %%% Get labels from runCond
+        label = strsplit(runSet{S}{end}.label,'_');
+        condLabel = cell(size(label));
+        for i = 1:length(label)
+            label{i} = strsplit(label{i},'-'); label{i} = label{i}{1};
+            condLabel{i} = [rCond{S}{:}]'; condLabel{i} = {condLabel{i}.(label{i})}';
+            condLabel{i}(cellfun('isempty',condLabel{i})) = {'dflt'};
+            condLabel{i} = strcat(label{i},'-',condLabel{i});
+        end
+        condLabel = cat(2,condLabel{:});
+        for r = 1:size(condLabel,1)
+            condLabel{r,1} = strjoin(condLabel(r,:),'_');
+        end
+        condLabel(:,2) = [];
+        
+        %%% Extract matching runCond and put in runSet
+        tmp = [rCond{S}{ismember(condLabel,runSet{S}{end}.label)}];
+        runSet{S}{end}.date   = cat(1,tmp.date);
+        runSet{S}{end}.fList  = cat(1,tmp.fList);
+        runSet{S}{end}.nDummy = cat(1,tmp.nDummy);
         runSet{S}{end}.dbDir  = sesDbList{S};
 
         if ~isempty(runSet{S}{end}.fList)
-            runSet{S}{end} = initPreproc3(runSet{S}{end},[],[],skipMask,forceThis,verboseThis);
+            runSet{S}{end} = initPreproc4(runSet{S}{end},[],[],skipMask,forceThis,verboseThis);
         end
     end
 end
