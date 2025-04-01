@@ -590,10 +590,11 @@ end
 % end
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Assert bids structure is well defined
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Assert bids structure is well defined and deal with special cases
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 for RS = 1:length(rCond)
+    %%% Assert
     [S,str] = assertBids(rCond{RS});
 
     %%% Correct special cases
@@ -625,11 +626,69 @@ for RS = 1:length(rCond)
     end
 end
 
+%%% Remove empty runCond
+for RS = 1:length(rCond)
+    ind = [rCond{RS}{:}];
+    ind = cellfun('isempty',{ind.fList});
+    rCond{RS}(ind) = [];
+end
+
+%%% Remove empty sessions
+ind = cellfun('isempty',rCond);
+rCond(ind)      = [];
+avMap(ind)      = [];
+b0(ind)         = [];
+b1(ind)         = [];
+dirs(ind)       = [];
+dirsOrig(ind)   = [];
+memprage(ind)   = [];
+pcMRA(ind)      = [];
+phs(ind)        = [];
+prcDirList(ind) = [];
+sesDbList(ind)  = [];
+sesList(ind)    = [];
+subList(ind)    = [];
+tof(ind)        = [];
+
+% %%% Combine different sessions in the same runCond ----- too complicated
+% rCond = [rCond{:}]';% rCond = [rCond{:}]';
+% ind = false(size(rCond));
+% for rc1 = 1:length(rCond)
+%     for rc2 = 1:length(rCond)
+%         if rc1 == rc2;                               continue; end
+%         if ~strcmp(rCond{rc1}.sub ,rCond{rc2}.sub ); continue; end
+%         if ~strcmp(rCond{rc1}.acq ,rCond{rc2}.acq ); continue; end
+%         if ~strcmp(rCond{rc1}.prsc,rCond{rc2}.prsc); continue; end
+%         if ~strcmp(rCond{rc1}.task,rCond{rc2}.task); continue; end
+%         ind(rc1,rc2) = true;
+%     end
+% end
+% for rc1 = 1:length(rCond)
+%     if ~any(ind(rc1,:)); continue; end
+%         rCond{rc1}.ses = repmat('1',size(rCond{rc1}.fList,1),1);
+%         ind2 = find(ind(rc1,:));
+%         for rc2 = 1:length(ind2)
+%             rCond{rc1}.ses = cat(1,rCond{rc1}.ses,repmat(num2str(rc2+1),size(rCond{ind2(rc2)}.fList,1),1));
+            
+            
+%             rCond{ind2(rc2)}
+%         end
+
+        
+%         rCond{rc1}.dirs
+%         rCond(rc1)
+%         rCond(ind(rc1,:))
+%         set2cond4
+    
+% end
+
+
 % whos
 % for RS = 1:length(rCond)
 %     assertBids(rCond{RS});
 % end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 
 
 %%%%%%%%%%%%%%%%%
@@ -868,121 +927,118 @@ for s = 1:length(subList(sesIndList))
     end
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Between-run motion correction
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+forceThis   = 1;
+verboseThis = 1;
+param.baseType = 'firstSes_firstRun_avFrame'; % 'firstSes_firstRun_avFrame'
+
+for s = 1:length(subList(sesIndList))
+    S = sesIndList(s);
+    for rs = 1:length(runSet{S})
+        if isempty(runSet{S}{rs}.fList); continue; end
+        acqLabel = strsplit(runSet{S}{rs}.label,'_'); acqLabel = char(replace(acqLabel(contains(acqLabel,'acq-')),'acq-',''));
+        
+        %%% Set smoothing parameter
+        switch acqLabel
+            case 'bold'
+                param.spSmFac  = []; % smoothing parameter (fraction of voxel size)
+            otherwise
+                param.spSmFac  = 3; % smoothing parameter (fraction of voxel size)
+        end
+
+        %%% Set base image
+        switch param.baseType
+            case 'firstSes_firstRun_avFrame'
+                %%%% Find sessions for that subject
+                indS = find(ismember(subList,subList(S)));
+                %%%% Find session with same acquisition label
+                labelList = [runSet{indS}]; labelList = [labelList{:}]; labelList = {labelList.label}';
+                indS = indS(ismember(labelList,runSet{S}{rs}.label));
+                %%%% Find first session for that subject
+                [~,b] = min(str2num(char(sesList(indS))));
+                indS = indS(b);
+                %%%% Set fBase from that session using the first run of the same label
+                labelList = [runSet{indS}]; labelList = [labelList{:}]; labelList = {labelList.label}';
+                indRS = ismember(labelList,runSet{S}{rs}.label);
+                fBase = runSet{indS}{indRS}.wrMocoFiles.fMocoSmr.runAv.fList{1,1};
+            otherwise
+                dbstack; error('code that');
+        end
+
+        %%% Set brain mask
+        fMask = runSet{S}{rs}.fMasks.fMaskInv;
+
+        %%% Estimate motion
+        runSet{S}{rs}.brMocoFiles = estimMotionBR(runSet{S}{rs}.wrMocoFiles,fBase,fMask,param,forceThis,verboseThis);
+    end
+end
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
 return
 
 
-
-
-runSet  = cell(size(rCond));
-volAnat = cell(size(rCond));
-
-sesIndList = 1:length(subList);
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Between-session motion correction
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+forceThis   = 0;
+verboseThis = 1;
 for s = 1:length(subList(sesIndList))
     S = sesIndList(s);
+    for rs = 1:length(runSet{S})
+        if isempty(runSet{S}{rs}.fList); continue; end
+    
+        % find reference session (here we loop over all sessions, keep the ones with matching sub and choose the first)
+        if S>1
+            % find all associated sessions
+            runSetRef = {};
+            for SS = 1:S-1
+                for rsrs = 1:length(runSet{SS})
+                    if ...
+                            strcmp(runSet{SS}{rsrs}.sub,runSet{S}{rs}.sub) && ... % same sub
+                            str2num(runSet{SS}{rsrs}.ses)<str2num(runSet{S}{rs}.ses) && ... % ref ses before current ses
+                            strcmp(runSet{SS}{rsrs}.label,runSet{S}{rs}.label) && ... % same acquisition scheme
+                            ~isempty(runSet{SS}{rsrs}.fList)
 
-    info.sub          = subList{S};
-    info.ses          = sesList{S};
-    info.sesDb        = sesDbList{S};
-
-    do.loadIt = 0;
-    do.doIt = 1;
-    do.saveIt = 0;
-
-    switch info.dataSetLabel
-        case {'vsmDriven' 'vsmDiamCenSur'}
-            setList = [rCond{S}{:}]; setList = unique({setList.acq}');
-
-            %%% Initiate data
-            forceThis   = 1;
-            verboseThis = 1;
-            skipMask    = 1;
-            for rs = 1:length(setList)
-                runSet{S}{1,end+1}.info = info;
-                runSet{S}{end}.sub      = subList{S};
-                runSet{S}{end}.ses      = sesList{S};
-                runSet{S}{end}.label    = setList{rs};
-                % runSet{S}{end}.wd       = outDir;
-                % runSet{S}{end}.bidsDir  = bidsDirList{S};
-                % runSet{S}{end}.bidsDerivDir = fullfile(bidsDirList{S},'derivatives',['set-' runSet{S}{end}.label]);
-                ind = [rCond{S}{:}]; ind = {ind.acq}; ind = ismember(ind,runSet{S}{end}.label);
-                runSet{S}{end}.fList = [rCond{S}{ind}];
-                runSet{S}{end}.date   = cat(1,runSet{S}{end}.fList.date);
-                runSet{S}{end}.fList  = cat(1,runSet{S}{end}.fList.fList);
-                runSet{S}{end}.nDummy = cat(1,dummyList{S}{ind});
-
-                if ~isempty(runSet{S}{end}.fList)
-                    runSet{S}{end} = initPreproc3(runSet{S}{end},[],[],skipMask,forceThis,verboseThis);
-                    % runSet{S}{end} = rmfield(runSet{S}{end},'date');
-                end
-            end
-
-
-
-            %%% Draw all masks
-            forceThis   = 0;
-            verboseThis = 0;
-            for rs = 1:length(runSet{S})
-                if forceThis || ~isempty(runSet{S}{rs}.fList) && (~isfield(runSet{S}{rs},'fMasks') || isempty(runSet{S}{rs}.fMasks))
-                    runSet{S}{rs} = initPreproc3(runSet{S}{rs},[],[],0,forceThis,verboseThis);
-                end
-            end
-
-            
-            %%% Estimate within-run motion
-            for rs = 1:length(setList)
-                if ~isempty(runSet{S}{rs}.fList)
-                    forceThis   = 0;
-                    verboseThis = 1;
-                    param.baseType = 'first'; % 'first' 'av' 'mcAv'
-                    if strcmp(runSet{S}{rs}.label,'bold')
-                        param.spSmFac  = []; % fraction of voxel size
-                    else
-                        param.spSmFac  = 3; % fraction of voxel size
+                        runSetRef{end+1} = runSet{SS}{rsrs};
                     end
-                    fBase = []; fMask = runSet{S}{rs}.initFiles.fMasks.fMaskInv;
-                    runSet{S}{rs}.wrMocoFiles = estimMotionWR2(runSet{S}{rs}.initFiles,param,fBase,fMask,forceThis,verboseThis);
-
-                    % forceThis   = 0;
-                    % verboseThis = 1;
-                    % info.useSynth = 0;
-                    % fMask = volAnatPreproc2(do,info,runSet{S}{rs},forceThis,verboseThis);
-                    % fMask = fMask.func.mask.brainInv.mri.fspec;
-
-                    % % % % % % compute all costs
-                    % % % % % r = 1;
-                    % % % % % tmp = [];
-                    % % % % % tmp.initFiles = runSet{S}{rs}.initFiles;
-                    % % % % % tmp.initFiles.fList = tmp.initFiles.fList(r,:);
-                    % % % % % tmp.initFiles.nDummy = tmp.initFiles.nDummy(r,:);
-                    % % % % % tmp.initFiles.fOrigList = tmp.initFiles.fOrigList(r,:);
-                    % % % % % tmp.initFiles.acqTime = tmp.initFiles.acqTime(r,:);
-                    % % % % % tmp.initFiles.bidsList = tmp.initFiles.bidsList(r,:);
-                    % % % % % tmp.initFiles.nFrame = tmp.initFiles.nFrame(r,:);
-                    % % % % % tmp.initFiles.vSize = tmp.initFiles.vSize(r,:);
-                    % % % % % tmp.initFiles.fPlumbList = tmp.initFiles.fPlumbList(r,:);
-                    % % % % % tmp.initFiles.fEstimList = tmp.initFiles.fEstimList(r,:);
-                    % % % % % tmp.initFiles.fEstimList = {[tmp.initFiles.fEstimList{1} '[300..$]']};
-                    % % % % % tmp.wrMocoFiles = estimMotionWR2(tmp.initFiles,param,fBase,fMask,1,2);
-                    % % % % % param1D = strsplit(tmp.wrMocoFiles.cmd{1}{contains(tmp.wrMocoFiles.cmd{1},'1Dparam_save')},' '); param1D = [param1D{2} '.param.1D'];
-                    % % % % % % add 6 zeros to each row of param1D
-                    % % % % % tmp.wrMocoFiles.cmd{1}{end+1} = ['-allcostX1D ' param1D ' ' replace(param1D,'.param.1D','.cost')];
-                    % % % % % tmp.wrMocoFiles.cmd{1}{end-1} = [tmp.wrMocoFiles.cmd{1}{end-1} ' \'];
-                    % % % % % % loop over base image to get cross-frame correlation
-                    % % % % % % matrix the idea is that one may derive to best
-                    % % % % % % reference by averaging only the frames that correlate
-                    % % % % % % the best among each other
-
                 end
             end
-        otherwise
-            dbstack; error('code that');
+
+            if ~isempty(runSetRef)
+                % keep the first one
+                setRefAcqTime = repmat(datetime,size(runSetRef));
+                for ss = 1:length(runSetRef)
+                    setRefAcqTime(ss) = min(runSetRef{ss}.acqTime);
+                end
+                [~,b] = min(setRefAcqTime);
+                runSetRef = runSetRef{b};
+
+                param.sourceType = 'avRun_avFrame';
+                param.spSmFac  = 1; % fraction of voxel size
+                fBase = runSetRef.brMocoFiles.fMocoSmr.sesAv.runAv.fList{1};
+                % fBase = fullfile(runSetRef.brMocoFiles.wd,'av_cat_mcBR_av_mcWR_setPlumb_volTs.nii.gz');
+                fMask = cellstr(runSetRef.brMocoFiles.fMaskList);
+                if length(unique(fMask))==1
+                    fMask = fMask{1}; else; dbstack; error('code that');
+                end
+                runSet{S}{rs}.bsMocoFiles = estimMotionBS2(runSet{S}{rs}.brMocoFiles,fBase,fMask,param,forceThis,verboseThis);
+                runSet{S}{rs}.bsMocoFiles.fGeomSes1 = runSetRef.initFiles.fGeom;
+            end
+        end
     end
 end
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 
 
-
+return
 
 
 
