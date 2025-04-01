@@ -94,7 +94,7 @@ end
 % srcFs = 'source /usr/local/freesurfer/fs-stable741-env-autoselect';
 % srcAfni = 'export PATH=$PATH:/usr/pubsw/packages/AFNI/23.1.05';
 % %%%%%%%%%%%%%%%%%%
-%% %%%%%%%%%%%%%%%
+%% %%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Variables, Paths and stim/acq info
@@ -233,6 +233,7 @@ switch info.dataSetLabel
                 rCond{end,1}{1,end}.sub      = subList{end};
                 rCond{end,1}{1,end}.ses      = sesList{end};
                 rCond{end,1}{1,end}.acq      = 'vfMRI';
+                rCond{end,1}{1,end}.prsc     = 'dflt';
                 rCond{end,1}{1,end}.task     = '50sPrd5sDur';
                 dsgn = runDsgn;
                 dsgn.task = rCond{end,1}{1,end}.task;
@@ -261,6 +262,7 @@ switch info.dataSetLabel
                 rCond{end,1}{1,end}.sub      = subList{end};
                 rCond{end,1}{1,end}.ses      = sesList{end};
                 rCond{end,1}{1,end}.acq      = 'vfMRIpc';
+                rCond{end,1}{1,end}.prsc     = 'dflt';
                 rCond{end,1}{1,end}.task = '50sPrd5sDur';
                 dsgn = runDsgn;
                 dsgn.task = rCond{end,1}{1,end}.task;
@@ -307,6 +309,7 @@ switch info.dataSetLabel
                 rCond{end,1}{1,end}.sub  = subList{end};
                 rCond{end,1}{1,end}.ses  = sesList{end};
                 rCond{end,1}{1,end}.acq  = 'vfMRIpc';
+                rCond{end,1}{1,end}.prsc = 'dflt';
                 rCond{end,1}{1,end}.task = '50sPrd5sDur';
                 dsgn = runDsgn;
                 dsgn.task = rCond{end,1}{1,end}.task;
@@ -353,6 +356,7 @@ switch info.dataSetLabel
                 rCond{end,1}{1,end}.sub  = subList{end};
                 rCond{end,1}{1,end}.ses  = sesList{end};
                 rCond{end,1}{1,end}.acq  = 'vfMRI';
+                rCond{end,1}{1,end}.prsc = 'dflt';
                 rCond{end,1}{1,end}.task = '50sPrd10sDur';
                 dsgn = runDsgn;
                 dsgn.task = rCond{end,1}{1,end}.task;
@@ -381,6 +385,7 @@ switch info.dataSetLabel
                 rCond{end,1}{1,end}.sub  = subList{end};
                 rCond{end,1}{1,end}.ses  = sesList{end};
                 rCond{end,1}{1,end}.acq  = 'vfMRIpc';
+                rCond{end,1}{1,end}.prsc = 'dflt';
                 rCond{end,1}{1,end}.task = '50sPrd10sDur';
                 dsgn = runDsgn;
                 dsgn.task = rCond{end,1}{1,end}.task;
@@ -429,6 +434,7 @@ switch info.dataSetLabel
                 rCond{end,1}{1,end}.sub  = subList{end};
                 rCond{end,1}{1,end}.ses  = sesList{end};
                 rCond{end,1}{1,end}.acq  = 'bold';
+                rCond{end,1}{1,end}.prsc = 'dflt';
                 rCond{end,1}{1,end}.task = '50sPrd5sDur';
                 dsgn = runDsgn;
                 dsgn.task = rCond{end,1}{1,end}.task;
@@ -454,6 +460,7 @@ switch info.dataSetLabel
                 rCond{end,1}{1,end}.sub  = subList{end};
                 rCond{end,1}{1,end}.ses  = sesList{end};
                 rCond{end,1}{1,end}.acq  = 'bold';
+                rCond{end,1}{1,end}.prsc = 'dflt';
                 rCond{end,1}{1,end}.task = '50sPrd10sDur';
                 dsgn = runDsgn;
                 dsgn.task = rCond{end,1}{1,end}.task;
@@ -484,6 +491,7 @@ switch info.dataSetLabel
                 rCond{end,1}{1,end}.sub  = subList{end};
                 rCond{end,1}{1,end}.ses  = sesList{end};
                 rCond{end,1}{1,end}.acq  = 'bold';
+                rCond{end,1}{1,end}.prsc = 'dflt';
                 rCond{end,1}{1,end}.task = '50sPrd1sDur';
                 dsgn = runDsgn;
                 dsgn.task = rCond{end,1}{1,end}.task;
@@ -573,9 +581,7 @@ switch info.dataSetLabel
     otherwise
         dbstack; error('code that')
 end
-%%%%%%%%%%%%%%%%%%%%%%%%%
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 % for i = 1:length(rCond)
 %     tmp = [rCond{i}{:}];
 %     [{tmp.sub}
@@ -598,10 +604,12 @@ for RS = 1:length(rCond)
                 % ignore this naming difference
             case 'sub-vsmDiamCenSurP9_ses-1_acq-vfMRI_task-50sPrd5sDur'
                 % split the two different slice presciptions
-                if ~isempty(rCond{RS}{S(s)}.prsc); continue; end
                 ind = [2 2 2 1 1];
+                if size(rCond{RS}{S(s)}.fList,1)~=length(ind)
+                    disp('runSet already split');
+                    continue
+                end
                 rCond{RS}{end+1} = rCond{RS}{S(s)};
-                rCond{RS}{S(s)}.prsc = [];
                 rCond{RS}{S(s)}.fList(ind~=1)  = [];
                 rCond{RS}{S(s)}.date(ind~=1)   = [];
                 rCond{RS}{S(s)}.bhvr(ind~=1)   = [];
@@ -624,19 +632,17 @@ end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-
 %%%%%%%%%%%%%%%%%
 %% Initalize data
 %%%%%%%%%%%%%%%%%
-forceThis   = 1;
+forceThis   = 0;
 verboseThis = 1;
 skipMask    = 1;
 
 runSet  = cell(size(rCond));
 volAnat = cell(size(rCond));
 
-sesIndList = 14;
-% sesIndList = 1:length(subList);
+sesIndList = 1:length(subList);
 for s = 1:length(subList(sesIndList))
     S = sesIndList(s);
 
@@ -681,44 +687,78 @@ for s = 1:length(subList(sesIndList))
     end
 end
 %% %%%%%%%%%%%%%%
-return
+
 
 
 %%%%%%%%%%%%%%%%%
 %% Draw all masks
 %%%%%%%%%%%%%%%%%
-forceThis   = 1;
+forceThis   = 0;
 verboseThis = 1;
-sesIndList = 14%:length(subList);
+sesIndList  = 1:length(subList);
 
-%%% Copy to neurocloud and use freeview there
+%%% First check database for mask in bids derivative directory
+for s = 1:length(subList(sesIndList))
+    S = sesIndList(s);
+    for rs = 1:length(runSet{S})
+        if isempty(runSet{S}{rs}.fList); continue; end
+
+        %%% Get preproc mask filenames
+        runSet{S}{rs}.dbDirBidsDeriv = fullfile(runSet{S}{rs}.dbDir,'bids','derivatives');
+        fBase = char(runSet{S}{rs}.initFiles.fPlumbSmr.sesCat.runAv.fList(:,1));
+        runSet{S}{rs}.fMasks.fMaskInv = replace(fBase,'_volTs.nii.gz','_volBrainMaskInv.nii.gz');
+        runSet{S}{rs}.fMasks.fMask = replace(fBase,'_volTs.nii.gz','_volBrainMask.nii.gz');
+        
+        %%% Get db mask filenames
+        fDbMaskInv = strsplit(runSet{S}{rs}.fMasks.fMaskInv,filesep);
+        fDbMaskInv = strjoin(fDbMaskInv(end-2:end),filesep);
+        fDbMaskInv = fullfile(runSet{S}{rs}.dbDirBidsDeriv,fDbMaskInv);
+        % fDbMask = strsplit(runSet{S}{rs}.fMasks.fMask,filesep);
+        % fDbMask = strjoin(fDbMask(end-2:end),filesep);
+        % fDbMask = fullfile(runSet{S}{rs}.dbDirBidsDeriv,fDbMask);
+
+        %%% Copy from db if exists
+        if ~forceThis && exist(fDbMaskInv,'file')% && exist(fDbMask,'file')
+            copyfile(fDbMaskInv,runSet{S}{rs}.fMasks.fMaskInv);
+            % copyfile(fDbMask,runSet{S}{rs}.fMasks.fMask);
+        end
+    end
+end
+
+%%% To draw masks, copy to neurocloud, use freeview there, then copy back
 cmd = {};
 cmd{end+1} = src.fs;
 for s = 1:length(subList(sesIndList))
     S = sesIndList(s);
-    setList = [rCond{S}{:}]; setList = unique({setList.acq}');
     for rs = 1:length(runSet{S})
         if isempty(runSet{S}{rs}.fList); continue; end
-        
-        fBase = runSet{S}{rs}.initFiles.fPlumbSmr.sesCat.runAv.fList{1};
-        fMask = replace(fBase,'_volTs.nii.gz','_volBrainMaskInv.nii.gz');
-        runSet{S}{rs}.fMasks.fMaskInv = fMask;
-        if forceThis || ~exist(fMask,'file')
+        fBase = char(runSet{S}{rs}.initFiles.fPlumbSmr.sesCat.runAv.fList(:,1));
+        % fMask = replace(fBase,'_volTs.nii.gz','_volBrainMaskInv.nii.gz');
+        % runSet{S}{rs}.fMasks.fMaskInv = fMask;
+        if forceThis || ~exist(runSet{S}{rs}.fMasks.fMaskInv,'file')
             mri     = MRIread(fBase,1);
             mri.vol = ones(mri.volsize);
-            MRIwrite(mri,fMask);
-            cmd{end+1} = ['scp sebp@takoyaki1:' fMask ' sebp@takoyaki1:' fBase ' .'];
+            MRIwrite(mri,runSet{S}{rs}.fMasks.fMaskInv);
+            cmd{end+1} = ['scp sebp@takoyaki1:' runSet{S}{rs}.fMasks.fMaskInv ' sebp@takoyaki1:' fBase ' .'];
             cmd{end+1} = 'echo draw EXCLUSION mask for the BRAIN (brain=0, nonBrain=1)';
             cmd{end+1} = 'freeview -v \';
             cmd{end+1} = [replace(fBase,[fileparts(fBase) filesep],'./') ' \'];
-            cmd{end+1} = [replace(fMask,[fileparts(fMask) filesep],'./') ':colormap=heat:opacity=0.5'];
-            cmd{end+1} = ['scp ' replace(fMask,[fileparts(fMask) filesep],'./') ' sebp@takoyaki1:' fMask ''];
+            cmd{end+1} = [replace(runSet{S}{rs}.fMasks.fMaskInv,[fileparts(runSet{S}{rs}.fMasks.fMaskInv) filesep],'./') ':colormap=heat:opacity=0.33'];
+            cmd{end+1} = ['scp ' replace(runSet{S}{rs}.fMasks.fMaskInv,[fileparts(runSet{S}{rs}.fMasks.fMaskInv) filesep],'./') ' sebp@takoyaki1:' runSet{S}{rs}.fMasks.fMaskInv ''];
         end
     end
 end
-clipboard('copy',strjoin(cmd,newline));
+% clipboard('copy',strjoin(cmd,newline));
+% Write commands to a file instead of copying to clipboard
+cmdFile = fullfile(info.prcDir, 'prc', 'mask_creation_commands.sh');
+fileID = fopen(cmdFile, 'w');
+fprintf(fileID, '%s\n', cmd{:});
+fclose(fileID);
 disp('++++++++++++++++++++++++++++++++++++++++')
-disp('Command for mask creation is in clipboard.')
+% disp('Command for mask creation is in clipboard.')
+% disp('Paste in freeview capable remote to transfer data, create masks and transfer back.')
+disp('Commands for mask creation are in file:')
+disp(cmdFile)
 disp('Paste in freeview capable remote to transfer data, create masks and transfer back.')
 %%% Wait for user to confirm mask drawing is done
 done = '';
@@ -728,69 +768,218 @@ while ~strcmpi(done, 'done')
 end
 disp('++++++++++++++++++++++++++++++++++++++++')
 
+
 %%% Invert mask
 for s = 1:length(subList(sesIndList))
     S = sesIndList(s);
-    setList = [rCond{S}{:}]; setList = unique({setList.acq}');
     for rs = 1:length(runSet{S})
         if isempty(runSet{S}{rs}.fList); continue; end
         mri = MRIread(runSet{S}{rs}.fMasks.fMaskInv);
         mri.vol = 1-mri.vol;
-        runSet{S}{rs}.fMasks.fMask = replace(runSet{S}{rs}.fMasks.fMaskInv,'Inv.nii.gz','.nii.gz');
-        MRIwrite(mri,runSet{S}{rs}.fMasks.fMask);
-        % figure('WindowStyle','docked');
-        % imagesc(mri.vol(:,:,:,1),[0 1]);
-        % ax = gca; ax.Colormap = gray; ax.DataAspectRatio = [1 1 1];
-        % ax.YTick = []; ax.XTick = []; ax.Padding = 'tight';
+        if forceThis || ~exist(runSet{S}{rs}.fMasks.fMask,'file')
+            MRIwrite(mri,runSet{S}{rs}.fMasks.fMask);
+        end
     end
 end
 
+%%% Save mask to bidsDerivDir
+forceThis = 0;
+for s = 1:length(subList(sesIndList))
+    S = sesIndList(s);
+    for rs = 1:length(runSet{S})
+        if isempty(runSet{S}{rs}.fList); continue; end
         
-% for s = 1:length(subList(sesIndList))
-%     S = sesIndList(s);
-%     setList = [rCond{S}{:}]; setList = unique({setList.acq}');
-
-%     for rs = 1:length(runSet{S})
+        runSet{S}{rs}.dbDirBidsDeriv = fullfile(runSet{S}{rs}.dbDir,'bids','derivatives');
         
-%         %% MATLAB DRAWING TOOLS -- too slow
-%         %%% Read MRI
-%         mri = MRIread(runSet{S}{end}.initFiles.fPlumbSmr.sesCat.runAv.fList{1});
-%         figure('WindowStyle','docked');
-%         imagesc(mri.vol(:,:,:,1),[0 800]);
-%         ax = gca; ax.Colormap = gray; ax.DataAspectRatio = [1 1 1];
-%         ax.YTick = []; ax.XTick = []; ax.Padding = 'tight';
-        
-%         %%% Ask user to zoom to satisfaction
-%         disp('zoom to satisfaction then press any key')
-%         pause
+        [a,b,~] = fileparts(replace(runSet{S}{rs}.fMasks.fMask,'.nii.gz','')); [a1,b1,~] = fileparts(a); [a11,b11,~] = fileparts(a1);
+        fMask = fullfile(runSet{S}{rs}.dbDirBidsDeriv,b11,b1,[b '.nii.gz']);
+        if ~exist(fileparts(fMask),'dir'); mkdir(fileparts(fMask)); end
+        [a,b,~] = fileparts(replace(runSet{S}{rs}.fMasks.fMaskInv,'.nii.gz','')); [a1,b1,~] = fileparts(a); [a11,b11,~] = fileparts(a1);
+        fMaskInv = fullfile(runSet{S}{rs}.dbDirBidsDeriv,b11,b1,[b '.nii.gz']);
+        if ~exist(fileparts(fMaskInv),'dir'); mkdir(fileparts(fMaskInv)); end
 
-%         %%% Ask user to draw and repeat to satisfaction
-%         satisfied = 0;
-%         while ~satisfied
-%             disp('outline brain roi in one go')
-%             h = drawfreehand(ax);
-%             disp('satisfied? (1 for yes, 0 for no)')
-%             satisfied = input('');
-%             if ~satisfied
-%                 delete(h);
-%             end
-%         end
-
-%         %%% Convert drawing to mask
-%         [x, y] = meshgrid(1:size(mri.vol(:,:,:,1),2), 1:size(mri.vol(:,:,:,1),1));
-%         mask = reshape(isinterior(polyshape(round(h.Position(:,1)), round(h.Position(:,2))), x(:), y(:)), size(mri.vol(:,:,:,1)));
-%         delete(h);
-%         if verboseThis>=1
-%             fMask = figure('WindowStyle','docked');
-%             imagesc(mask);
-%             axMask = gca; axMask.Colormap = gray; axMask.DataAspectRatio = [1 1 1];
-%             axMask.YTick = []; axMask.XTick = []; axMask.Padding = 'tight';
-%             axMask.XLim = ax.XLim; axMask.YLim = ax.YLim;
-%         end
-%         %%% Save mask to nii
-%     end
-% end
+        if forceThis || ~exist(fMask,'file')
+            copyfile(runSet{S}{rs}.fMasks.fMask,fMask);
+        end
+        if forceThis || ~exist(fMaskInv,'file')
+            copyfile(runSet{S}{rs}.fMasks.fMaskInv,fMaskInv);
+        end
+    end
+end
 %% %%%%%%%%%%%%%%
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Within-run motion correction
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+forceThis   = 0;
+verboseThis = 1;
+param.baseType = 'first'; % 'first' 'av' 'mcAv'
+
+for s = 1:length(subList(sesIndList))
+    S = sesIndList(s);
+    for rs = 1:length(runSet{S})
+        if isempty(runSet{S}{rs}.fList); continue; end
+            acqLabel = strsplit(runSet{S}{rs}.label,'_'); acqLabel = replace(acqLabel(contains(acqLabel,'acq-')),'acq-','');
+            if strcmp(acqLabel,'bold')
+                param.spSmFac  = []; % smoothing parameter (fraction of voxel size)
+            else
+                param.spSmFac  = 3; % smoothing parameter (fraction of voxel size)
+            end
+            fBase = [];
+            fMask = runSet{S}{rs}.fMasks.fMaskInv;
+            
+            try
+                runSet{S}{rs}.wrMocoFiles = estimMotionWR2(runSet{S}{rs}.initFiles,param,fBase,fMask,forceThis,verboseThis);
+            catch
+                tmp = fullfile(workDir,['S-' num2str(S) '_RS-' num2str(S)]);
+                save(fullfile(tmp,'motion_correction_error.mat'));
+            end
+
+            % % % % % % compute all costs
+            % % % % % r = 1;
+            % % % % % tmp = [];
+            % % % % % tmp.initFiles = runSet{S}{rs}.initFiles;
+            % % % % % tmp.initFiles.fList = tmp.initFiles.fList(r,:);
+            % % % % % tmp.initFiles.nDummy = tmp.initFiles.nDummy(r,:);
+            % % % % % tmp.initFiles.fOrigList = tmp.initFiles.fOrigList(r,:);
+            % % % % % tmp.initFiles.acqTime = tmp.initFiles.acqTime(r,:);
+            % % % % % tmp.initFiles.bidsList = tmp.initFiles.bidsList(r,:);
+            % % % % % tmp.initFiles.nFrame = tmp.initFiles.nFrame(r,:);
+            % % % % % tmp.initFiles.vSize = tmp.initFiles.vSize(r,:);
+            % % % % % tmp.initFiles.fPlumbList = tmp.initFiles.fPlumbList(r,:);
+            % % % % % tmp.initFiles.fEstimList = tmp.initFiles.fEstimList(r,:);
+            % % % % % tmp.initFiles.fEstimList = {[tmp.initFiles.fEstimList{1} '[300..$]']};
+            % % % % % tmp.wrMocoFiles = estimMotionWR2(tmp.initFiles,param,fBase,fMask,1,2);
+            % % % % % param1D = strsplit(tmp.wrMocoFiles.cmd{1}{contains(tmp.wrMocoFiles.cmd{1},'1Dparam_save')},' '); param1D = [param1D{2} '.param.1D'];
+            % % % % % % add 6 zeros to each row of param1D
+            % % % % % tmp.wrMocoFiles.cmd{1}{end+1} = ['-allcostX1D ' param1D ' ' replace(param1D,'.param.1D','.cost')];
+            % % % % % tmp.wrMocoFiles.cmd{1}{end-1} = [tmp.wrMocoFiles.cmd{1}{end-1} ' \'];
+            % % % % % % loop over base image to get cross-frame correlation
+            % % % % % % matrix the idea is that one may derive to best
+            % % % % % % reference by averaging only the frames that correlate
+            % % % % % % the best among each other
+            
+    end
+end
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+return
+
+
+
+
+runSet  = cell(size(rCond));
+volAnat = cell(size(rCond));
+
+sesIndList = 1:length(subList);
+for s = 1:length(subList(sesIndList))
+    S = sesIndList(s);
+
+    info.sub          = subList{S};
+    info.ses          = sesList{S};
+    info.sesDb        = sesDbList{S};
+
+    do.loadIt = 0;
+    do.doIt = 1;
+    do.saveIt = 0;
+
+    switch info.dataSetLabel
+        case {'vsmDriven' 'vsmDiamCenSur'}
+            setList = [rCond{S}{:}]; setList = unique({setList.acq}');
+
+            %%% Initiate data
+            forceThis   = 1;
+            verboseThis = 1;
+            skipMask    = 1;
+            for rs = 1:length(setList)
+                runSet{S}{1,end+1}.info = info;
+                runSet{S}{end}.sub      = subList{S};
+                runSet{S}{end}.ses      = sesList{S};
+                runSet{S}{end}.label    = setList{rs};
+                % runSet{S}{end}.wd       = outDir;
+                % runSet{S}{end}.bidsDir  = bidsDirList{S};
+                % runSet{S}{end}.bidsDerivDir = fullfile(bidsDirList{S},'derivatives',['set-' runSet{S}{end}.label]);
+                ind = [rCond{S}{:}]; ind = {ind.acq}; ind = ismember(ind,runSet{S}{end}.label);
+                runSet{S}{end}.fList = [rCond{S}{ind}];
+                runSet{S}{end}.date   = cat(1,runSet{S}{end}.fList.date);
+                runSet{S}{end}.fList  = cat(1,runSet{S}{end}.fList.fList);
+                runSet{S}{end}.nDummy = cat(1,dummyList{S}{ind});
+
+                if ~isempty(runSet{S}{end}.fList)
+                    runSet{S}{end} = initPreproc3(runSet{S}{end},[],[],skipMask,forceThis,verboseThis);
+                    % runSet{S}{end} = rmfield(runSet{S}{end},'date');
+                end
+            end
+
+
+
+            %%% Draw all masks
+            forceThis   = 0;
+            verboseThis = 0;
+            for rs = 1:length(runSet{S})
+                if forceThis || ~isempty(runSet{S}{rs}.fList) && (~isfield(runSet{S}{rs},'fMasks') || isempty(runSet{S}{rs}.fMasks))
+                    runSet{S}{rs} = initPreproc3(runSet{S}{rs},[],[],0,forceThis,verboseThis);
+                end
+            end
+
+            
+            %%% Estimate within-run motion
+            for rs = 1:length(setList)
+                if ~isempty(runSet{S}{rs}.fList)
+                    forceThis   = 0;
+                    verboseThis = 1;
+                    param.baseType = 'first'; % 'first' 'av' 'mcAv'
+                    if strcmp(runSet{S}{rs}.label,'bold')
+                        param.spSmFac  = []; % fraction of voxel size
+                    else
+                        param.spSmFac  = 3; % fraction of voxel size
+                    end
+                    fBase = []; fMask = runSet{S}{rs}.initFiles.fMasks.fMaskInv;
+                    runSet{S}{rs}.wrMocoFiles = estimMotionWR2(runSet{S}{rs}.initFiles,param,fBase,fMask,forceThis,verboseThis);
+
+                    % forceThis   = 0;
+                    % verboseThis = 1;
+                    % info.useSynth = 0;
+                    % fMask = volAnatPreproc2(do,info,runSet{S}{rs},forceThis,verboseThis);
+                    % fMask = fMask.func.mask.brainInv.mri.fspec;
+
+                    % % % % % % compute all costs
+                    % % % % % r = 1;
+                    % % % % % tmp = [];
+                    % % % % % tmp.initFiles = runSet{S}{rs}.initFiles;
+                    % % % % % tmp.initFiles.fList = tmp.initFiles.fList(r,:);
+                    % % % % % tmp.initFiles.nDummy = tmp.initFiles.nDummy(r,:);
+                    % % % % % tmp.initFiles.fOrigList = tmp.initFiles.fOrigList(r,:);
+                    % % % % % tmp.initFiles.acqTime = tmp.initFiles.acqTime(r,:);
+                    % % % % % tmp.initFiles.bidsList = tmp.initFiles.bidsList(r,:);
+                    % % % % % tmp.initFiles.nFrame = tmp.initFiles.nFrame(r,:);
+                    % % % % % tmp.initFiles.vSize = tmp.initFiles.vSize(r,:);
+                    % % % % % tmp.initFiles.fPlumbList = tmp.initFiles.fPlumbList(r,:);
+                    % % % % % tmp.initFiles.fEstimList = tmp.initFiles.fEstimList(r,:);
+                    % % % % % tmp.initFiles.fEstimList = {[tmp.initFiles.fEstimList{1} '[300..$]']};
+                    % % % % % tmp.wrMocoFiles = estimMotionWR2(tmp.initFiles,param,fBase,fMask,1,2);
+                    % % % % % param1D = strsplit(tmp.wrMocoFiles.cmd{1}{contains(tmp.wrMocoFiles.cmd{1},'1Dparam_save')},' '); param1D = [param1D{2} '.param.1D'];
+                    % % % % % % add 6 zeros to each row of param1D
+                    % % % % % tmp.wrMocoFiles.cmd{1}{end+1} = ['-allcostX1D ' param1D ' ' replace(param1D,'.param.1D','.cost')];
+                    % % % % % tmp.wrMocoFiles.cmd{1}{end-1} = [tmp.wrMocoFiles.cmd{1}{end-1} ' \'];
+                    % % % % % % loop over base image to get cross-frame correlation
+                    % % % % % % matrix the idea is that one may derive to best
+                    % % % % % % reference by averaging only the frames that correlate
+                    % % % % % % the best among each other
+
+                end
+            end
+        otherwise
+            dbstack; error('code that');
+    end
+end
+
+
+
+
+
+
 
 
 %%%%%%%%%%%%%%%%

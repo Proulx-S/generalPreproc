@@ -14,7 +14,13 @@
 		},
 		{
 			"path": "../../../../local/users/Proulx-S/db"
+		},
+		{
+			"path": "../../../../scratch/users/Proulx-S/doIt_generalPreproc/vsmDiamCenSur"
 		}
 	],
-	"settings": {}
+	"settings": {
+		"MATLAB.startDebuggerAutomatically": true,
+		"MATLAB.telemetry": false
+	}
 }
