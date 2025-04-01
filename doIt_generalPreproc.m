@@ -750,23 +750,27 @@ for s = 1:length(subList(sesIndList))
 end
 % clipboard('copy',strjoin(cmd,newline));
 % Write commands to a file instead of copying to clipboard
-cmdFile = fullfile(info.prcDir, 'prc', 'mask_creation_commands.sh');
-fileID = fopen(cmdFile, 'w');
-fprintf(fileID, '%s\n', cmd{:});
-fclose(fileID);
-disp('++++++++++++++++++++++++++++++++++++++++')
-% disp('Command for mask creation is in clipboard.')
-% disp('Paste in freeview capable remote to transfer data, create masks and transfer back.')
-disp('Commands for mask creation are in file:')
-disp(cmdFile)
-disp('Paste in freeview capable remote to transfer data, create masks and transfer back.')
-%%% Wait for user to confirm mask drawing is done
-done = '';
-while ~strcmpi(done, 'done')
-    disp('When done, type "done"')
-    done = input('', 's');
+if length(cmd)==1
+    disp('all masks found in database bids derivative, no need to draw')
+else
+    cmdFile = fullfile(info.prcDir, 'prc', 'mask_creation_commands.sh');
+    fileID = fopen(cmdFile, 'w');
+    fprintf(fileID, '%s\n', cmd{:});
+    fclose(fileID);
+    disp('++++++++++++++++++++++++++++++++++++++++')
+    % disp('Command for mask creation is in clipboard.')
+    % disp('Paste in freeview capable remote to transfer data, create masks and transfer back.')
+    disp('Commands for mask creation are in file:')
+    disp(cmdFile)
+    disp('Paste in freeview capable remote to transfer data, create masks and transfer back.')
+    %%% Wait for user to confirm mask drawing is done
+    done = '';
+    while ~strcmpi(done, 'done')
+        disp('When done, type "done"')
+        done = input('', 's');
+    end
+    disp('++++++++++++++++++++++++++++++++++++++++')
 end
-disp('++++++++++++++++++++++++++++++++++++++++')
 
 
 %%% Invert mask
