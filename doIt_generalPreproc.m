@@ -96,6 +96,9 @@ end
 % %%%%%%%%%%%%%%%%%%
 %% %%%%%%%%%%%%%%%%%%
 
+
+if 1
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Variables, Paths and stim/acq info
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -590,6 +593,7 @@ end
 % end
 
 
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Assert bids structure is well defined and deal with special cases
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -691,6 +695,7 @@ tof(ind)        = [];
 
 
 
+
 %%%%%%%%%%%%%%%%%
 %% Initalize data
 %%%%%%%%%%%%%%%%%
@@ -746,6 +751,7 @@ for s = 1:length(subList(sesIndList))
     end
 end
 %% %%%%%%%%%%%%%%
+
 
 
 
@@ -873,6 +879,7 @@ end
 
 
 
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Within-run motion correction
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -927,6 +934,7 @@ for s = 1:length(subList(sesIndList))
     end
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 
 
 
@@ -987,12 +995,10 @@ end
 
 
 
-
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Finalize preprocessing (apply transformations in a single interpolation step)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-forceThis   = 0;
+forceThis   = 1;
 verboseThis = 1;
 
 for s = 1:length(subList(sesIndList))
@@ -1006,6 +1012,12 @@ for s = 1:length(subList(sesIndList))
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+
+
+save tmp.mat -v7.3
+end
+return
+% load tmp.mat
 
 
 
