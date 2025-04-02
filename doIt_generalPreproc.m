@@ -97,7 +97,7 @@ end
 %% %%%%%%%%%%%%%%%%%%
 
 
-if 1
+if 0
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Variables, Paths and stim/acq info
@@ -998,7 +998,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Finalize preprocessing (apply transformations in a single interpolation step)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-forceThis   = 1;
+forceThis   = 0;
 verboseThis = 1;
 
 for s = 1:length(subList(sesIndList))
@@ -1016,8 +1016,8 @@ end
 
 save tmp.mat -v7.3
 end
+load tmp.mat
 return
-% load tmp.mat
 
 
 
