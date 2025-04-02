@@ -933,7 +933,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Between-run motion correction
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-forceThis   = 1;
+forceThis   = 0;
 verboseThis = 1;
 param.baseType = 'firstSes_firstRun_avFrame'; % 'firstSes_firstRun_avFrame'
 
@@ -951,27 +951,33 @@ for s = 1:length(subList(sesIndList))
                 param.spSmFac  = 3; % smoothing parameter (fraction of voxel size)
         end
 
-        %%% Set base image
+        %%% Set base image and mask
         switch param.baseType
             case 'firstSes_firstRun_avFrame'
                 %%%% Find sessions for that subject
-                indS = find(ismember(subList,subList(S)));
-                %%%% Find session with same acquisition label
-                labelList = [runSet{indS}]; labelList = [labelList{:}]; labelList = {labelList.label}';
-                indS = indS(ismember(labelList,runSet{S}{rs}.label));
+                fBase = runSet(ismember(subList,subList(S)));
+                %%%% Find sessions with same acquisition label
+                for i = 1:length(fBase)
+                    for ii = 1:length(fBase{i})
+                        if ~strcmp(fBase{i}{ii}.label,runSet{S}{rs}.label); fBase{i}{ii} = []; end
+                    end
+                    fBase{i}(cellfun('isempty',fBase{i})) = [];
+                end
+                fBase(cellfun('isempty',fBase)) = [];
+                fBase = [fBase{:}];
                 %%%% Find first session for that subject
-                [~,b] = min(str2num(char(sesList(indS))));
-                indS = indS(b);
-                %%%% Set fBase from that session using the first run of the same label
-                labelList = [runSet{indS}]; labelList = [labelList{:}]; labelList = {labelList.label}';
-                indRS = ismember(labelList,runSet{S}{rs}.label);
-                fBase = runSet{indS}{indRS}.wrMocoFiles.fMocoSmr.runAv.fList{1,1};
+                ses = zeros(size(fBase)); for i = 1:length(fBase); ses(i) = str2double(fBase{i}.ses); end
+                [~,b] = min(ses);
+                fBase = fBase{b};
+                %%%% Set mask
+                fMask = fBase.fMasks.fMaskInv;
+                %%%% Set geometry
+                runSet{S}{rs}.wrMocoFiles.fGeomSes1 = fBase.initFiles.fGeom;
+                %%%% Set base
+                fBase = fBase.wrMocoFiles.fMocoSmr.runAv.fList{1,1};
             otherwise
                 dbstack; error('code that');
         end
-
-        %%% Set brain mask
-        fMask = runSet{S}{rs}.fMasks.fMaskInv;
 
         %%% Estimate motion
         runSet{S}{rs}.brMocoFiles = estimMotionBR(runSet{S}{rs}.wrMocoFiles,fBase,fMask,param,forceThis,verboseThis);
@@ -980,65 +986,45 @@ end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-return
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Between-session motion correction
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Finalize preprocessing (apply transformations in a single interpolation step)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 forceThis   = 0;
 verboseThis = 1;
+
 for s = 1:length(subList(sesIndList))
     S = sesIndList(s);
     for rs = 1:length(runSet{S})
         if isempty(runSet{S}{rs}.fList); continue; end
-    
-        % find reference session (here we loop over all sessions, keep the ones with matching sub and choose the first)
-        if S>1
-            % find all associated sessions
-            runSetRef = {};
-            for SS = 1:S-1
-                for rsrs = 1:length(runSet{SS})
-                    if ...
-                            strcmp(runSet{SS}{rsrs}.sub,runSet{S}{rs}.sub) && ... % same sub
-                            str2num(runSet{SS}{rsrs}.ses)<str2num(runSet{S}{rs}.ses) && ... % ref ses before current ses
-                            strcmp(runSet{SS}{rsrs}.label,runSet{S}{rs}.label) && ... % same acquisition scheme
-                            ~isempty(runSet{SS}{rsrs}.fList)
-
-                        runSetRef{end+1} = runSet{SS}{rsrs};
-                    end
-                end
-            end
-
-            if ~isempty(runSetRef)
-                % keep the first one
-                setRefAcqTime = repmat(datetime,size(runSetRef));
-                for ss = 1:length(runSetRef)
-                    setRefAcqTime(ss) = min(runSetRef{ss}.acqTime);
-                end
-                [~,b] = min(setRefAcqTime);
-                runSetRef = runSetRef{b};
-
-                param.sourceType = 'avRun_avFrame';
-                param.spSmFac  = 1; % fraction of voxel size
-                fBase = runSetRef.brMocoFiles.fMocoSmr.sesAv.runAv.fList{1};
-                % fBase = fullfile(runSetRef.brMocoFiles.wd,'av_cat_mcBR_av_mcWR_setPlumb_volTs.nii.gz');
-                fMask = cellstr(runSetRef.brMocoFiles.fMaskList);
-                if length(unique(fMask))==1
-                    fMask = fMask{1}; else; dbstack; error('code that');
-                end
-                runSet{S}{rs}.bsMocoFiles = estimMotionBS2(runSet{S}{rs}.brMocoFiles,fBase,fMask,param,forceThis,verboseThis);
-                runSet{S}{rs}.bsMocoFiles.fGeomSes1 = runSetRef.initFiles.fGeom;
-            end
-        end
+        initFiles    = runSet{S}{rs}.initFiles;
+        preprocFiles = cat(3,{runSet{S}{rs}.wrMocoFiles},{runSet{S}{rs}.brMocoFiles});
+        runSet{S}{rs}.finalFiles = finalizePreproc6(initFiles,preprocFiles,forceThis,verboseThis);
     end
 end
-%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Refactor from set to cond
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+rCondOrig = rCond;
+% rCond = rCondOrig;
+[rCond ,subList ,runCondAcqList ,runCondStimList ] = set2cond5(runSet,rCond,phs,volAnat);
+%% %%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 
 return
+
+
+
+
+
 
 
 
