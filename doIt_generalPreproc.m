@@ -1,6 +1,7 @@
 clear all
 close all
-
+force = 1;
+info.dataSetLabel = 'vsmDiamCenSur';
 %%%%%%%%%%%%%%%%%%%%%
 %% Set up environment
 %%%%%%%%%%%%%%%%%%%%%
@@ -67,43 +68,21 @@ switch envId
 end
 
 
-
-
-
-
-% clear all
-% close all
-% [outDir,pipId] = fileparts(mfilename('fullpath'));
-% outDir = fullfile(outDir,pipId); if ~exist(outDir,'dir'); mkdir(outDir); end
-
-
-% %%%%%%%%%%%%%%%%%%
-% %% Dependencies %%
-% %%%%%%%%%%%%%%%%%%
-% % matlab
-% addpath(genpath(fullfile(pwd,pipId)))
-% addpath(genpath('/usr/local/freesurfer/stable7.4.1/matlab/'))
-% addpath(genpath('/space/takoyaki/1/users/proulxs/tools/chronux'))
-% addpath(genpath('/space/takoyaki/1/users/proulxs/tools/vasomoTools'))
-% addpath(genpath('/space/takoyaki/1/users/proulxs/tools/bassReg2'))
-% addpath(genpath('/space/takoyaki/1/users/proulxs/tools/martinosTools'))
-% addpath(genpath('/space/takoyaki/1/users/proulxs/tools/util'))
-
-% % bash
-% global srcAfni srcFs
-% srcFs = 'source /usr/local/freesurfer/fs-stable741-env-autoselect';
-% srcAfni = 'export PATH=$PATH:/usr/pubsw/packages/AFNI/23.1.05';
-% %%%%%%%%%%%%%%%%%%
+% Current dataset/project
+info.workDir      = workDir; if ~exist(info.workDir,'dir'); mkdir(info.workDir); end
+info.workFile     = fullfile(info.workDir,[info.dataSetLabel '_' replace(workScript,'doIt_','') '.mat']);
+info.indexFile    = fullfile(info.workDir,[info.dataSetLabel '_indexFile.mat']);
 %% %%%%%%%%%%%%%%%%%%
 
 
-if 0
+
+if force || ~exist(info.workFile,'file')
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Variables, Paths and stim/acq info
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-info.dataSetLabel = 'vsmDiamCenSur';
-
 switch info.dataSetLabel
     case 'vsmDiamCenSur'
         % % info.datasetDir = fullfile(storageDir,info.dataSetLabel);
@@ -696,11 +675,11 @@ tof(ind)        = [];
 
 
 
+forceThis   = 0;
+verboseThis = 1;
 %%%%%%%%%%%%%%%%%
 %% Initalize data
 %%%%%%%%%%%%%%%%%
-forceThis   = 0;
-verboseThis = 1;
 skipMask    = 1;
 
 runSet  = cell(size(rCond));
@@ -754,12 +733,11 @@ end
 
 
 
-
+forceThis   = 0;
+verboseThis = 1;
 %%%%%%%%%%%%%%%%%
 %% Draw all masks
 %%%%%%%%%%%%%%%%%
-forceThis   = 0;
-verboseThis = 1;
 sesIndList  = 1:length(subList);
 
 %%% First check database for mask in bids derivative directory
@@ -880,11 +858,11 @@ end
 
 
 
+forceThis   = 0;
+verboseThis = 1;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Within-run motion correction
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-forceThis   = 0;
-verboseThis = 1;
 param.baseType = 'first'; % 'first' 'av' 'mcAv'
 
 for s = 1:length(subList(sesIndList))
@@ -938,11 +916,11 @@ end
 
 
 
+forceThis   = 0;
+verboseThis = 1;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Between-run motion correction
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-forceThis   = 0;
-verboseThis = 1;
 param.baseType = 'firstSes_firstRun_avFrame'; % 'firstSes_firstRun_avFrame'
 
 for s = 1:length(subList(sesIndList))
@@ -995,11 +973,11 @@ end
 
 
 
+forceThis   = 0;
+verboseThis = 1;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Finalize preprocessing (apply transformations in a single interpolation step)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-forceThis   = 0;
-verboseThis = 1;
 
 for s = 1:length(subList(sesIndList))
     S = sesIndList(s);
@@ -1014,605 +992,77 @@ end
 
 
 
-save tmp.mat -v7.3
+
+forceThis   = 0;
+verboseThis = 0;
+%%%%%%%%%%%%%
+%% QA preproc
+%%%%%%%%%%%%%
+[acqSet,subListU,QA] = runSet_combSes(runSet,subList,sesList);
+for S = 1:length(QA.fOrigList)
+    for A = 1:length(QA.fOrigList{S})
+        outDir = fullfile(info.prcDir,'bids','derivatives',['sub-' subListU{S}],'ses-cat',acqSet{S}{A}(1).label);
+        [QA.fig{S,1}{A}.fBefore,QA.fig{S,1}{A}.hBefore] = xCorrQA(QA.fOrigList{S}{A}   ,QA.fMaskList{S}{A},QA.nDummy{S}{A},'beforePreproc',outDir,forceThis,verboseThis);
+        [QA.fig{S,1}{A}.fAfter ,QA.fig{S,1}{A}.hAfter ] = xCorrQA(QA.fPreprocList{S}{A},QA.fMaskList{S}{A},QA.nDummy{S}{A},'afterPreproc' ,outDir,forceThis,verboseThis);
+    end
 end
-load tmp.mat
-return
+QA.subList = subListU;
+%% %%%%%%%%%%
 
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Refactor from set to cond
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-rCondOrig = rCond;
+forceThis   = 1;
+verboseThis = 0;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Save proprocessing files
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+if forceThis || ~exist(info.workFile,'file')
+    save(info.workFile,'runSet','subList','sesList','acqSet','QA','-v7.3');
+end
+%% %%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+
+else
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Load proprocessing files
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+load(info.workFile,'runSet','subList','sesList','acqSet','QA');
+%% %%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+end
+
+
+
+if force || ~exist(info.indexFile,'file')
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Refactor and save data index file
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+save(info.indexFile,'rCond','QA','info','-v7.3');
+% rCondOrig = rCond;
 % rCond = rCondOrig;
 [rCond ,subList ,runCondAcqList ,runCondStimList ] = set2cond5(runSet,rCond,phs,volAnat);
-%% %%%%%%%%%%%%%%%%%%%%%%%%%
+% NOTE: we should also copy to bids derivatives directory in the permanent database.
+% This involves changing names in rCond.
+% The idea would be to then store the index file there two
+% and have both the index and data in the same place
+% for further analysis that do not require comming back to preprocessing.
+save(info.indexFile,'rCond','QA','info','-v7.3');
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-
-
-return
-
-
-
-
-
-
-
-
-%%%%%%%%%%%%%%%%
-%% Preprocessing
-%%%%%%%%%%%%%%%%
-if 1
-    
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %% Session-by-session loop %%
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    runSet  = cell(size(rCond));
-    volAnat = cell(size(rCond));
-
-    sesIndList = 14%:length(subList);
-    for s = 1:length(subList(sesIndList))
-        S = sesIndList(s);
-
-        % see doIt_pilotPipeline08c/stepTemplate.m
-        %% Housekeeping
-        info.sub          = subList{S};
-        info.ses          = sesList{S};
-        info.sesDb        = sesDbList{S};
-        % info.bidsDir      = bidsDirList{S};
-        % info.bidsDerivDir = fullfile(info.bidsDir,'derivatives'); if ~exist(info.bidsDerivDir,'dir'); mkdir(info.bidsDerivDir); end
-
-
-        tic; disp(' '); disp(' '); disp(' ');
-        tmp = {['sub-' info.sub '_ses-' info.ses]};
-        tmp{end+1} = [num2str(s) '/' num2str(length(sesIndList))];
-        tmp{end+1} = ['Nses=' num2str(length(subList))];
-        tmp = strjoin(tmp,'; ');
-        disp(repmat('+',1,length(tmp))); disp(repmat('+',1,length(tmp))); disp(repmat('+',1,length(tmp))); disp(tmp)
-
-
-
-
-
-
-
-        %% Main analysis steps
-
-
-
-
-
-
-
-
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        %% Within-run preprocessing %
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        do.loadIt = 0;
-        do.doIt = 1;
-        do.saveIt = 0;
-
-        switch info.dataSetLabel
-            case {'vsmDriven' 'vsmDiamCenSur'}
-                setList = [rCond{S}{:}]; setList = unique({setList.acq}');
-
-                %%% Initiate data
-                forceThis   = 1;
-                verboseThis = 1;
-                skipMask    = 1;
-                for rs = 1:length(setList)
-                    runSet{S}{1,end+1}.info = info;
-                    runSet{S}{end}.sub      = subList{S};
-                    runSet{S}{end}.ses      = sesList{S};
-                    runSet{S}{end}.label    = setList{rs};
-                    % runSet{S}{end}.wd       = outDir;
-                    % runSet{S}{end}.bidsDir  = bidsDirList{S};
-                    % runSet{S}{end}.bidsDerivDir = fullfile(bidsDirList{S},'derivatives',['set-' runSet{S}{end}.label]);
-                    ind = [rCond{S}{:}]; ind = {ind.acq}; ind = ismember(ind,runSet{S}{end}.label);
-                    runSet{S}{end}.fList = [rCond{S}{ind}];
-                    runSet{S}{end}.date   = cat(1,runSet{S}{end}.fList.date);
-                    runSet{S}{end}.fList  = cat(1,runSet{S}{end}.fList.fList);
-                    runSet{S}{end}.nDummy = cat(1,dummyList{S}{ind});
-
-                    if ~isempty(runSet{S}{end}.fList)
-                        runSet{S}{end} = initPreproc3(runSet{S}{end},[],[],skipMask,forceThis,verboseThis);
-                        % runSet{S}{end} = rmfield(runSet{S}{end},'date');
-                    end
-                end
-
-
-
-                %%% Draw all masks
-                forceThis   = 0;
-                verboseThis = 0;
-                for rs = 1:length(runSet{S})
-                    if forceThis || ~isempty(runSet{S}{rs}.fList) && (~isfield(runSet{S}{rs},'fMasks') || isempty(runSet{S}{rs}.fMasks))
-                        runSet{S}{rs} = initPreproc3(runSet{S}{rs},[],[],0,forceThis,verboseThis);
-                    end
-                end
-
-                
-                %%% Estimate within-run motion
-                for rs = 1:length(setList)
-                    if ~isempty(runSet{S}{rs}.fList)
-                        forceThis   = 0;
-                        verboseThis = 1;
-                        param.baseType = 'first'; % 'first' 'av' 'mcAv'
-                        if strcmp(runSet{S}{rs}.label,'bold')
-                            param.spSmFac  = []; % fraction of voxel size
-                        else
-                            param.spSmFac  = 3; % fraction of voxel size
-                        end
-                        fBase = []; fMask = runSet{S}{rs}.initFiles.fMasks.fMaskInv;
-                        runSet{S}{rs}.wrMocoFiles = estimMotionWR2(runSet{S}{rs}.initFiles,param,fBase,fMask,forceThis,verboseThis);
-
-                        % forceThis   = 0;
-                        % verboseThis = 1;
-                        % info.useSynth = 0;
-                        % fMask = volAnatPreproc2(do,info,runSet{S}{rs},forceThis,verboseThis);
-                        % fMask = fMask.func.mask.brainInv.mri.fspec;
-
-                        % % % % % % compute all costs
-                        % % % % % r = 1;
-                        % % % % % tmp = [];
-                        % % % % % tmp.initFiles = runSet{S}{rs}.initFiles;
-                        % % % % % tmp.initFiles.fList = tmp.initFiles.fList(r,:);
-                        % % % % % tmp.initFiles.nDummy = tmp.initFiles.nDummy(r,:);
-                        % % % % % tmp.initFiles.fOrigList = tmp.initFiles.fOrigList(r,:);
-                        % % % % % tmp.initFiles.acqTime = tmp.initFiles.acqTime(r,:);
-                        % % % % % tmp.initFiles.bidsList = tmp.initFiles.bidsList(r,:);
-                        % % % % % tmp.initFiles.nFrame = tmp.initFiles.nFrame(r,:);
-                        % % % % % tmp.initFiles.vSize = tmp.initFiles.vSize(r,:);
-                        % % % % % tmp.initFiles.fPlumbList = tmp.initFiles.fPlumbList(r,:);
-                        % % % % % tmp.initFiles.fEstimList = tmp.initFiles.fEstimList(r,:);
-                        % % % % % tmp.initFiles.fEstimList = {[tmp.initFiles.fEstimList{1} '[300..$]']};
-                        % % % % % tmp.wrMocoFiles = estimMotionWR2(tmp.initFiles,param,fBase,fMask,1,2);
-                        % % % % % param1D = strsplit(tmp.wrMocoFiles.cmd{1}{contains(tmp.wrMocoFiles.cmd{1},'1Dparam_save')},' '); param1D = [param1D{2} '.param.1D'];
-                        % % % % % % add 6 zeros to each row of param1D
-                        % % % % % tmp.wrMocoFiles.cmd{1}{end+1} = ['-allcostX1D ' param1D ' ' replace(param1D,'.param.1D','.cost')];
-                        % % % % % tmp.wrMocoFiles.cmd{1}{end-1} = [tmp.wrMocoFiles.cmd{1}{end-1} ' \'];
-                        % % % % % % loop over base image to get cross-frame correlation
-                        % % % % % % matrix the idea is that one may derive to best
-                        % % % % % % reference by averaging only the frames that correlate
-                        % % % % % % the best among each other
-
-                    end
-                end
-            otherwise
-                dbstack; error('code that');
-        end
-        %% %%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        %% Between-run preprocessing %
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        %%% run or load preprocessing
-        do.loadIt = 0;
-        do.doIt   = 1;
-        do.saveIt = 0;
-        forceThis   = 0;
-        verboseThis = 1;
-                    
-        switch info.dataSetLabel
-            case {'vsmDriven' 'vsmDiamCenSur'}
-                for rs = 1:length(runSet{S})
-                    if isempty(runSet{S}{rs}.fList); continue; end
-                    param.baseType = 'firstRun_avFrame'; % 'first' 'av' 'mcAv'
-                    param.spSmFac  = 1; % fraction of voxel size
-                    if strcmp(runSet{S}{rs}.label,'bold')
-                        param.spSmFac  = []; % fraction of voxel size
-                    end
-                    fBase = [];
-                    fMask = runSet{S}{rs}.fMasks.fMaskInv;
-                    runSet{S}{rs}.brMocoFiles = estimMotionBR(runSet{S}{rs}.wrMocoFiles,fBase,fMask,param,forceThis,verboseThis);
-                end
-            otherwise
-                dbstack; error('code that');
-        end
-        %% %%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        %% Between-session preprocessing %
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        %%% run or load preprocessing
-        do.loadIt = 0;
-        do.doIt = 1;
-        do.saveIt = 0;
-        forceThis   = 0;
-        verboseThis = 1;
-
-        % if S==4; keyboard; end
-
-        switch info.dataSetLabel
-            case {'vsmDriven' 'vsmDiamCenSur'}
-                for rs = 1:length(runSet{S})
-                    if isempty(runSet{S}{rs}.fList); continue; end
-                    
-                    % find reference session (here we loop over all sessions, keep the ones with matching sub and choose the first)
-                    if S>1
-                        % find all associated sessions
-                        runSetRef = {};
-                        for SS = 1:S-1
-                            for rsrs = 1:length(runSet{SS})
-                                if ...
-                                        strcmp(runSet{SS}{rsrs}.sub,runSet{S}{rs}.sub) && ... % same sub
-                                        str2num(runSet{SS}{rsrs}.ses)<str2num(runSet{S}{rs}.ses) && ... % ref ses before current ses
-                                        strcmp(runSet{SS}{rsrs}.label,runSet{S}{rs}.label) && ... % same acquisition scheme
-                                        ~isempty(runSet{SS}{rsrs}.fList)
-
-                                    runSetRef{end+1} = runSet{SS}{rsrs};
-                                end
-                            end
-                        end
-
-                        if ~isempty(runSetRef)
-                            % keep the first one
-                            setRefAcqTime = repmat(datetime,size(runSetRef));
-                            for ss = 1:length(runSetRef)
-                                setRefAcqTime(ss) = min(runSetRef{ss}.acqTime);
-                            end
-                            [~,b] = min(setRefAcqTime);
-                            runSetRef = runSetRef{b};
-
-                            param.sourceType = 'avRun_avFrame';
-                            param.spSmFac  = 1; % fraction of voxel size
-                            fBase = runSetRef.brMocoFiles.fMocoSmr.sesAv.runAv.fList{1};
-                            % fBase = fullfile(runSetRef.brMocoFiles.wd,'av_cat_mcBR_av_mcWR_setPlumb_volTs.nii.gz');
-                            fMask = cellstr(runSetRef.brMocoFiles.fMaskList);
-                            if length(unique(fMask))==1
-                                fMask = fMask{1}; else; dbstack; error('code that');
-                            end
-                            runSet{S}{rs}.bsMocoFiles = estimMotionBS2(runSet{S}{rs}.brMocoFiles,fBase,fMask,param,forceThis,verboseThis);
-                            runSet{S}{rs}.bsMocoFiles.fGeomSes1 = runSetRef.initFiles.fGeom;
-                        end
-                    end
-                end
-            otherwise
-                dbstack; error('code that');
-        end
-        %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-
-        % % % % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        % % % % %% Cross-modal preprocessing %
-        % % % % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        % % % % %%% run or load preprocessing
-        % % % % do.loadIt = 0;
-        % % % % do.doIt = 1;
-        % % % % do.saveIt = 0;
-        % % % % forceThis   = 0;
-        % % % % verboseThis = 1;
-
-
-
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        %% Finalize preprocessing (one-step interpolation) %
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        do.loadIt = 0;
-        do.doIt = 1;
-        do.saveIt = 0;
-        switch info.dataSetLabel
-            case {'vsmDriven' 'vsmDiamCenSur'}
-                for rs = 1:length(runSet{S})
-                    if isempty(runSet{S}{rs}.fList); continue; end
-
-                    forceThis   = 0;
-                    verboseThis = 1;
-                    initFiles    = runSet{S}{rs}.initFiles;
-                    preprocFiles = permute({runSet{S}{rs}.wrMocoFiles runSet{S}{rs}.brMocoFiles},[1 3 2]);
-                    if isfield(runSet{S}{rs},'bsMocoFiles')
-                        preprocFiles = cat(3,preprocFiles,{runSet{S}{rs}.bsMocoFiles});
-                    else
-                        preprocFiles = cat(3,preprocFiles,{[]});
-                    end
-
-                    runSet{S}{rs}.finalFiles = finalizePreproc5(initFiles,preprocFiles,forceThis,verboseThis);
-                end
-
-
-                % fList = replace(runSet{S}.wrMocoFiles.fMocoList,'.nii.gz','.param.1D');
-                % for f = 1:length(fList)
-                %     cmd = {srcAfni};
-                %     cmd{end+1} = '1dplot \';
-                %     cmd{end+1} = '-yaxis "-1.5:1.5:1:1" - \';
-                %     cmd{end+1} = ['-ynames `head -2 ' fList{f} ' | tail -1 | cut -c 3-` - \'];
-                %     cmd{end+1} = fList{f};
-                %     [status,cmdout] = system(strjoin(cmd,newline),'-echo'); if status; dbstack; error(cmdout); error('x'); end
-                % end
-            otherwise
-                dbstack; error('code that')
-        end
-        %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-
-        %%%%%%%%%%%%%%%%%%%%%%
-        %% QA preprocessing %%
-        %%%%%%%%%%%%%%%%%%%%%%
-        forceThis = 0;
-        for rs = 1:length(runSet{S})
-            [runSet{S}{rs}.QA.cmd,runSet{S}{rs}.QA.fig] = qaReg4(runSet(S),[],runSet{S}{rs}.label,[],forceThis);
-        end
-        % rs = 1; runSet{S}{rs}.label
-        % clipboard('copy',runSet{S}{rs}.QA.cmd.allAfter{1})
-        % clipboard('copy',runSet{S}{rs}.QA.cmd.allMeansAfter)
-        % open(runSet{S}{rs}.QA.fig.fAfter)
-        
-        %% %%%%%%%%%%%%%%%%%%%
-
-
-
-        % % % % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        % % % % %% For surface registration %
-        % % % % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        % % % % forceThis = 0;
-        % % % % 
-        % % % % %%% fs
-        % % % % volAnat{S}{1,end+1}.sub      = subList{S};
-        % % % % volAnat{S}{end}.ses          = sesList{S};
-        % % % % volAnat{S}{end}.label        = 'fs';
-        % % % % volAnat{S}{end}.dbDir        = sesDbList{S};
-        % % % % fsDir = dir(fullfile(volAnat{S}{end}.dbDir,'fs',volAnat{S}{1,end}.sub));
-        % % % % if isempty(memprage{S}.fList) || isempty(fsDir)
-        % % % %     volAnat{S}{end}.wd           = '';
-        % % % %     volAnat{S}{end}.bidsDir      = '';
-        % % % %     volAnat{S}{end}.bidsDerivDir = '';
-        % % % %     volAnat{S}{end}.fsDir        = '';
-        % % % % else
-        % % % %     disp('fsDir found in dbDir')
-        % % % %     volAnat{S}{end}.wd           = outDir;
-        % % % %     volAnat{S}{end}.bidsDir      = bidsDirList{S};
-        % % % %     volAnat{S}{end}.bidsDerivDir = fullfile(bidsDirList{S},'derivatives',['set-' volAnat{S}{end}.label]);
-        % % % %     volAnat{S}{end}.fsDir        = fullfile(volAnat{S}{end}.bidsDerivDir,'fs');
-        % % % % 
-        % % % %     % copy to bids derivDir
-        % % % %     fsDir = fsDir(1).folder;
-        % % % %     if ~isFS(fsDir); dbstack; error('fsDir in dbDir does not seem to contain fs analysis'); end
-        % % % %     if forceThis || ~isFS(volAnat{S}{end}.fsDir)
-        % % % %         disp('copying fsDir from dbDir to bidsDerivDir')
-        % % % %         copyfile(fsDir,volAnat{S}{end}.fsDir)
-        % % % %     else
-        % % % %         disp('fsDir already in bidsDerivDir')
-        % % % %     end
-        % % % % end
-        % % % % 
-        % % % % %%% avMap
-        % % % % volAnat{S}{1,end+1}.sub      = subList{S};
-        % % % % volAnat{S}{end}.ses          = sesList{S};
-        % % % % volAnat{S}{end}.label        = 'avMap';
-        % % % % if isempty(avMap{S}.fList)
-        % % % %     volAnat{S}{end}.fList        = '';
-        % % % %     volAnat{S}{end}.dbDir        = '';
-        % % % %     volAnat{S}{end}.wd           = '';
-        % % % %     volAnat{S}{end}.bidsDir      = '';
-        % % % %     volAnat{S}{end}.bidsDerivDir = '';
-        % % % % else
-        % % % %     volAnat{S}{end}.fList        = avMap{S}.fList;
-        % % % %     volAnat{S}{end}.dbDir        = sesDbList{S};
-        % % % %     volAnat{S}{end}.wd           = outDir;
-        % % % %     volAnat{S}{end}.bidsDir      = bidsDirList{S};
-        % % % %     volAnat{S}{end}.bidsDerivDir = fullfile(bidsDirList{S},'derivatives',['set-' volAnat{S}{end}.label]);
-        % % % % end   
-        % % % % 
-        % % % % 
-        % % % % % %% Movies
-        % % % % % if S==3
-        % % % % %     keyboard
-        % % % % %     runSet{1:3}.vfMRI
-        % % % % %     for s = 1:3
-        % % % % %         runSet{s} = runSet{s}{1};
-        % % % % %     end
-        % % % % %     fList = {};
-        % % % % %     for s = 1:3
-        % % % % %         fList = cat(1,fList,runSet{s}.finalFiles.fPreprocList);
-        % % % % %     end
-        % % % % %     % Run averages
-        % % % % %     for r = 1:length(fList)
-        % % % % %         mri = MRIread(fList{r});
-        % % % % %         if r==1
-        % % % % %             frames = mean(mri.vol,4);
-        % % % % %         else
-        % % % % %             frames(:,:,r) = mean(mri.vol,4);
-        % % % % %         end
-        % % % % %     end
-        % % % % %     % figure('WindowStyle','docked');
-        % % % % %     % histogram(frames(:))
-        % % % % %     framesUINT16 = frames(59:end,22:362,:);
-        % % % % %     framesUINT16 = framesUINT16 - 150;
-        % % % % %     framesUINT16 = framesUINT16 ./ 500;
-        % % % % %     framesUINT16 = uint16(framesUINT16 .* (2^16-1));
-        % % % % %     % figure('WindowStyle','docked');
-        % % % % %     % imshow(framesUINT16(:,:,end))
-        % % % % %     filename = '/autofs/space/takoyaki_001/users/proulxs/vsmDriven/doIt_vsmDriven4simple/runAv_f';
-        % % % % %     for f = 1:size(framesUINT16,3)
-        % % % % %         imwrite(framesUINT16(:,:,f),[filename num2str(f,'%02i') '.png'])
-        % % % % %     end
-        % % % % % 
-        % % % % %     % one run
-        % % % % %     r = 1;
-        % % % % %     mri = MRIread(fList{r});
-        % % % % %     frames = squeeze(mri.vol);
-        % % % % %     % figure('WindowStyle','docked');
-        % % % % %     % histogram(frames(:))
-        % % % % %     framesUINT16 = frames(59:end,22:362,:);
-        % % % % %     framesUINT16 = framesUINT16 - 150;
-        % % % % %     framesUINT16 = framesUINT16 ./ 500;
-        % % % % %     framesUINT16 = uint16(framesUINT16 .* (2^16-1));
-        % % % % %     figure('WindowStyle','docked');
-        % % % % %     imshow(framesUINT16(:,:,end))
-        % % % % %     filename = '/autofs/space/takoyaki_001/users/proulxs/vsmDriven/doIt_vsmDriven4simple/run1_f';
-        % % % % %     for f = 1:size(framesUINT16,3)
-        % % % % %         imwrite(framesUINT16(:,:,f),[filename num2str(f,'%03i') '.png'])
-        % % % % %     end
-        % % % % % 
-        % % % % % 
-        % % % % % 
-        % % % % % 
-        % % % % %     frames = frames - min(frames(:));
-        % % % % %     frames = frames./max(frames(:));
-        % % % % %     frames = uint16(frames./(2^16-1));
-        % % % % %     imshow(frames(:,:,3))
-        % % % % % 
-        % % % % % 
-        % % % % %     figure('WindowStyle','docked');
-        % % % % %     J = im2uint16(frames);
-        % % % % %     imagesc(frames(:,:,3))
-        % % % % % end
-    end
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %% %%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-    %%%%%%%%%%%%%%%%%%%%%%%%
-    %% avMap registration %%
-    %%%%%%%%%%%%%%%%%%%%%%%%
-    % forceThis = 0;
-    % subList2 = unique(subList);
-    % avMap = cell(size(subList2));
-    % fs    = cell(size(subList2));
-    % vfMRI = cell(size(subList2));
-    % %%% get relevant data struct for each subject
-    % for S = 1:length(subList2)
-    %     volAnat2 = volAnat(ismember(subList,subList2{S}));
-    %     runSet2  = runSet(ismember(subList,subList2{S}));
-    %     for s = 1:length(volAnat2)
-    %         for ar = 1:length(volAnat2{s})
-    %             %%% get avMap
-    %             if strcmp(volAnat2{s}{ar}.label,'avMap') && ~isempty(volAnat2{s}{ar}.fList)
-    %                 avMap{S}{end+1} = volAnat2{s}{ar};
-    %             end
-    %             %%% get fs
-    %             if strcmp(volAnat2{s}{ar}.label,'fs') && ~isempty(volAnat2{s}{ar}.fsDir)
-    %                 fs{S}{end+1} = volAnat2{s}{ar};
-    %             end
-    %         end
-    %         for ar = 1:length(runSet2{s})
-    %             %%% get vfMRI
-    %             if strcmp(runSet2{s}{ar}.label,'vfMRI') && isfield(runSet2{s}{ar},'finalFiles') && strcmp(runSet2{s}{ar}.ses,'1')
-    %                vfMRI{S}{end+1} = runSet2{s}{ar}.finalFiles;
-    %             end
-    %         end
-    %     end
-    %     %%% make sure data struct make sense
-    %     if length(fs{S})~=1; dbstack; error(['expecting a single data struct for fs of ' subList2{S}]); end
-    %     fs{S} = fs{S}{1};
-    %     if length(avMap{S})~=1; dbstack; error(['expecting a single data struct for avMap of ' subList2{S}]); end
-    %     avMap{S} = avMap{S}{1};
-    %     if length(vfMRI{S})~=1; dbstack; error(['expecting a single data struct for vfMRI of ' subList2{S}]); end
-    %     vfMRI{S} = vfMRI{S}{1};
-    % end
-    % 
-    % %%% write avMap into functional space without resampling
-    % for S = 1:length(avMap)
-    %     fList = fullfile({avMap{S}.fList.folder},{avMap{S}.fList.name})';
-    %     ref = fullfile(vfMRI{S}.bidsDerivDir,'sesAvCat_av_cat_av_preproc_volTs.nii.gz');
-    %     fAvMap = fullfile(avMap{S}.bidsDerivDir,replace(avMap{S}.fList(1).name,'.nii.gz',''));
-    %     fAvMap = replace(fAvMap,'echo-1','echo-cat'); if ~exist(fAvMap,'dir'); mkdir(fAvMap); end
-    %     fAvMap = fullfile(fAvMap,'in-vfMRI.nii.gz');
-    %     if forceThis || ~exist(fAvMap,'file')
-    %         mriRef  = MRIread(ref,1);
-    %         for i = 1:length(fList)
-    %             mri = MRIread(fList{i});
-    %             if i==1
-    %                 mriRef.vol = mri.vol;
-    %                 mriRef.volres = mri.volres;
-    %                 mriRef.xsize  = mri.xsize;
-    %                 mriRef.ysize  = mri.ysize;
-    %                 mriRef.zsize  = mri.zsize;
-    %                 mriRef.tr     = mri.tr;
-    %                 mriRef.te     = mri.te;
-    %             else
-    %                 mriRef.vol = cat(4,mriRef.vol,mri.vol);
-    %             end
-    %         end
-    %         MRIwrite(mriRef,fAvMap);
-    %     end
-    %     avMap{S}.fList_invfMRI = cellstr(fAvMap);
-    %     if S==2; keyboard; end
-    %     try length(volAnat2{S}); catch keyboard; end
-    %     for i = 1:length(volAnat2{S})
-    %         if ~strcmp(volAnat2{S}{i}.label,'avMap'); continue; end
-    %         volAnat2{S}{i}.fList_invfMRI = cellstr(fAvMap);
-    %     end
-    % end
-    % 
-    % % disp(strjoin([fullfile(vfMRI{S}.bidsDerivDir,'sesAvCat_av_cat_av_preproc_volTs.nii.gz')
-    % % fullfile({avMap{S}.fList.folder},{avMap{S}.fList.name})'
-    % % avMap{S}.fList_invfMRI],[' \\' newline]))
-    % 
-    % % %%% Surface registration not working for avMap for a lack of WM to GM
-    % % %%% contrast. May be able to make it work somehow but too much work
-    % % [SUBJECTS_DIR,SUBJECT,~] = fileparts(fs{S}.fsDir);
-    % % MOV = {avMap{S}.fList.name}'; MOV = avMap{S}.fList(contains(MOV,'echo-1')); MOV = fullfile(MOV.folder,MOV.name);
-    % % [~,curOutDir,~] = fileparts(replace(MOV,'.nii.gz','')); curOutDir = fullfile(avMap{S}.bidsDerivDir,curOutDir);
-    % % surfReg(SUBJECTS_DIR,SUBJECT,MOV,curOutDir)
-    % for s = 1:length(runSet)
-    %     for ar = 1:length(runSet{s})
-    %         if ~strcmp(runSet{s}{ar}.label,'vfMRI'); continue; end
-    %         sub = runSet{s}{ar}.sub;
-    %         for S = 1:length(avMap)
-    %             if ~strcmp(avMap{S}.sub,sub); continue; end
-    %             runSet{s}{ar}.avMap.f = avMap{S}.fList_invfMRI;
-    %         end
-    %     end
-    % end
-    %% %%%%%%%%%%%%%%%%%%%%%
-
-
-
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %% Refactor from set to cond (and anonymize) %%
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    rCondOrig = rCond;
-    % rCond = rCondOrig;
-    [rCond ,subList ,runCondAcqList ,runCondStimList ] = set2cond4(runSet,rCond,phs,volAnat);
-
-    
-    %%% QA preprocessing including cross-session
-    forceThis = 0;
-    for S = 1:length(rCond)
-        acq = fields(rCond{S}); acq(ismember(acq,{'phs' 'QA'})) = [];
-        for a = 1:length(acq)
-            [rCond{S}.QA.(acq{a}).cmd,rCond{S}.QA.(acq{a}).fig,rCond{S}.QA.(acq{a}).prcSmr] = qaRegOnRunCond(rCond{S}.(acq{a}),forceThis);
-            % rCond{S}.QA.(acq{a}).prcSmr = rCond{S}.(acq{a}).prcSmr.smr;
-            % rCond{S}.(acq{a}) = rmfield(rCond{S}.(acq{a}),'prcSmr');
-        end
-        rCond{S}.QA.skipFlag = 1;
-    end
-
-    %%% preload volTs headers
-    rCond = MRIload3(rCond)';
-    
-    %%% save info and headers
-    disp(['saving to ' info.datasetDir '.mat']);
-    save(info.datasetDir,'info','rCond','subList','runCondAcqList','runCondStimList','-v7.3')
-    
-    %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%
-else
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %% Load preprocessed data filenames %%
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    disp(['loading from ' info.datasetDir '.mat']);
-    load(info.datasetDir,'rCond','subList','runCondAcqList','runCondStimList')
-    % intermediateMatFile = [mfilename('fullpath') '_study-' info.dataSetLabel];
-    % disp(['loading from ' intermediateMatFile '.mat']);
-    % load(intermediateMatFile,'rCond','subList','runCondAcqList','runCondStimList')
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 end
-%% %%%%%%%%%%%%%
-
-
-
 
 
 
 return
-
 
 
 
