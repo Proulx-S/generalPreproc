@@ -206,7 +206,13 @@ switch info.dataSetLabel
                 
 
                 %%%% vfMRI
-                dummy = 5;
+                % dummy   = 5; %(5*0.840)/0.840
+                % dummyPC = 5; %(5*0.840)/0.840
+                % ceil(3/0.840)
+                % (5*0.840)/1.699028
+                % (5*0.840)/1.997802
+                % 1.997802*5
+                % 1.699028*5
 
                 %%%%% 50sPrd5sDur -- inflow
                 rCond{end,1}{1,end+1} = runCond;
@@ -233,10 +239,17 @@ switch info.dataSetLabel
                     fListAcq  = dir(fullfile(dirs{end,1}.bids,'func',['*_acq-'  rCond{end,1}{1,end}.acq '*_angio.nii.gz']));
                     fList     = intersect(fullfile({fListAcq.folder },{fListAcq.name })',fullfile({fListTask.folder},{fListTask.name})');
                 rCond{end,1}{1,end}.fList = {};
-                if ~isempty(fList); rCond{end,1}{1,end}.fList = fList; end
+                if ~isempty(fList)
+                    rCond{end,1}{1,end}.fList = fList;
+                    tr = JSNread(fList,{'RepetitionTime' 'RepetitionTimeExcitation'});
+                    rCond{end,1}{1,end}.tr    = cat(1,tr{:,1}); %sec
+                    rCond{end,1}{1,end}.trExc = cat(1,tr{:,2}); %sec
+                    nShot = round(rCond{end,1}{1,end}.tr ./ rCond{end,1}{1,end}.trExc);
+                    rCond{end,1}{1,end}.trExc = rCond{end,1}{1,end}.tr ./ nShot;
+                    rCond{end,1}{1,end}.nDummy = ceil(3./(rCond{end,1}{1,end}.trExc)./nShot);
+                end
                 rCond{end,1}{1,end}.date  = repmat(acqDate,size(rCond{end,1}{1,end}.fList));
-                rCond{end,1}{1,end}.nDummy = repmat(dummy,size(rCond{end,1}{1,end}.fList));
-                
+
                 %%%%% 50sPrd5sDur -- pc
                 rCond{end,1}{1,end+1} = runCond;
                 rCond{end,1}{1,end}.dirs     = dirs{end,1};
@@ -280,9 +293,14 @@ switch info.dataSetLabel
                         fListDiffPhase(v,:) = fListDiffPhase{v,1}(~ismember(fListDiffPhase{v,1},fList))';
                     end
                     rCond{end,1}{1,end}.fList = cat(2,fList,fListDiffMag,fListDiffPhase);
+                    tr = JSNread(fList,{'RepetitionTime' 'RepetitionTimeExcitation'});
+                    rCond{end,1}{1,end}.tr    = cat(1,tr{:,1}); %sec
+                    rCond{end,1}{1,end}.trExc = cat(1,tr{:,2}); %sec
+                    nShot = round(rCond{end,1}{1,end}.tr ./ rCond{end,1}{1,end}.trExc);
+                    rCond{end,1}{1,end}.trExc = rCond{end,1}{1,end}.tr ./ nShot;
+                    rCond{end,1}{1,end}.nDummy = ceil(3./(rCond{end,1}{1,end}.trExc)./nShot);
                 end
                 rCond{end,1}{1,end}.date  = repmat(acqDate,size(rCond{end,1}{1,end}.fList,1),1);
-                rCond{end,1}{1,end}.nDummy = repmat(dummy  ,size(rCond{end,1}{1,end}.fList,1),1);
 
                 %%%%% 50sPrd5sDur -- pc (highVenc)
                 rCond{end,1}{1,end+1} = runCond;
@@ -327,9 +345,14 @@ switch info.dataSetLabel
                         fListDiffPhase(v,:) = fListDiffPhase{v,1}(~ismember(fListDiffPhase{v,1},fList))';
                     end
                     rCond{end,1}{1,end}.fList = cat(2,fList,fListDiffMag,fListDiffPhase);
+                    tr = JSNread(fList,{'RepetitionTime' 'RepetitionTimeExcitation'});
+                    rCond{end,1}{1,end}.tr    = cat(1,tr{:,1}); %sec
+                    rCond{end,1}{1,end}.trExc = cat(1,tr{:,2}); %sec
+                    nShot = round(rCond{end,1}{1,end}.tr ./ rCond{end,1}{1,end}.trExc);
+                    rCond{end,1}{1,end}.trExc = rCond{end,1}{1,end}.tr ./ nShot;
+                    rCond{end,1}{1,end}.nDummy = ceil(3./(rCond{end,1}{1,end}.trExc)./nShot);
                 end
                 rCond{end,1}{1,end}.date  = repmat(acqDate,size(rCond{end,1}{1,end}.fList,1),1);
-                rCond{end,1}{1,end}.nDummy = repmat(dummy  ,size(rCond{end,1}{1,end}.fList,1),1);
 
                 %%%%% 50sPrd10sDur -- inflow
                 rCond{end,1}{1,end+1} = runCond;
@@ -356,9 +379,16 @@ switch info.dataSetLabel
                 fListTask = dir(fullfile(dirs{end,1}.bids,'func',['*_task-' rCond{end,1}{1,end}.task     '_*.nii.gz']));
                 fList     = intersect(fullfile({fListAcq.folder },{fListAcq.name })',fullfile({fListTask.folder},{fListTask.name})');
                 rCond{end,1}{1,end}.fList = {};
-                if ~isempty(fList); rCond{end,1}{1,end}.fList = fList; end
+                if ~isempty(fList)
+                    rCond{end,1}{1,end}.fList = fList;
+                    tr = JSNread(fList,{'RepetitionTime' 'RepetitionTimeExcitation'});
+                    rCond{end,1}{1,end}.tr    = cat(1,tr{:,1}); %sec
+                    rCond{end,1}{1,end}.trExc = cat(1,tr{:,2}); %sec
+                    nShot = round(rCond{end,1}{1,end}.tr ./ rCond{end,1}{1,end}.trExc);
+                    rCond{end,1}{1,end}.trExc = rCond{end,1}{1,end}.tr ./ nShot;
+                    rCond{end,1}{1,end}.nDummy = ceil(3./(rCond{end,1}{1,end}.trExc)./nShot);
+                end
                 rCond{end,1}{1,end}.date  = repmat(acqDate,size(rCond{end,1}{1,end}.fList));
-                rCond{end,1}{1,end}.nDummy = repmat(dummy,size(rCond{end,1}{1,end}.fList));
 
                 %%%%% 50sPrd10sDur -- pc
                 rCond{end,1}{1,end+1} = runCond;
@@ -398,11 +428,16 @@ switch info.dataSetLabel
                         fListDiffPhase{v,1} = dir(fListDiffPhase{v,1});
                         fListDiffPhase{v,1} = fullfile({fListDiffPhase{v,1}.folder},{fListDiffPhase{v,1}.name})';
                         fListDiffPhase(v,:) = fListDiffPhase{v,1}(~ismember(fListDiffPhase{v,1},fList))';
+                        tr = JSNread(fList,{'RepetitionTime' 'RepetitionTimeExcitation'});
+                        rCond{end,1}{1,end}.tr    = cat(1,tr{:,1}); %sec
+                        rCond{end,1}{1,end}.trExc = cat(1,tr{:,2}); %sec
+                        nShot = round(rCond{end,1}{1,end}.tr ./ rCond{end,1}{1,end}.trExc);
+                        rCond{end,1}{1,end}.trExc = rCond{end,1}{1,end}.tr ./ nShot;
+                        rCond{end,1}{1,end}.nDummy = ceil(3./(rCond{end,1}{1,end}.trExc)./nShot);
                     end
                     rCond{end,1}{1,end}.fList = cat(2,fList,fListDiffMag,fListDiffPhase);
                 end
                 rCond{end,1}{1,end}.date  = repmat(acqDate,size(rCond{end,1}{1,end}.fList,1),1);
-                rCond{end,1}{1,end}.nDummy = repmat(dummy  ,size(rCond{end,1}{1,end}.fList,1),1);
                 
 
                 %%%% bold
@@ -432,8 +467,17 @@ switch info.dataSetLabel
                 rCond{end,1}{1,end}.dsgn  = dsgn;
                 rCond{end,1}{1,end}.fList = dir(fullfile(dirs{end,1}.bids,'func',['*task-' rCond{end,1}{1,end}.task '*_bold.nii.gz']));
                 rCond{end,1}{1,end}.fList = fullfile({rCond{end,1}{1,end}.fList.folder},{rCond{end,1}{1,end}.fList.name})';
+                if ~isempty(rCond{end,1}{1,end}.fList)
+                    tr = JSNread(rCond{end,1}{1,end}.fList,{'RepetitionTime' 'RepetitionTimeExcitation'});
+                    rCond{end,1}{1,end}.tr    = cat(1,tr{:,1}); %sec
+                    rCond{end,1}{1,end}.trExc = cat(1,tr{:,2}); %sec
+                    if isempty(rCond{end,1}{1,end}.trExc); rCond{end,1}{1,end}.trExc = rCond{end,1}{1,end}.tr; end
+                    nShot = round(rCond{end,1}{1,end}.tr ./ rCond{end,1}{1,end}.trExc);
+                    rCond{end,1}{1,end}.trExc = rCond{end,1}{1,end}.tr ./ nShot;
+                    rCond{end,1}{1,end}.nDummy = ceil(3./(rCond{end,1}{1,end}.trExc)./nShot);
+                end
                 rCond{end,1}{1,end}.date  = repmat(acqDate,size(rCond{end,1}{1,end}.fList));
-                rCond{end,1}{1,end}.nDummy = repmat(dummy,size(rCond{end,1}{1,end}.fList));
+                
 
                 %%%%% 50sPrd10sDur
                 rCond{end,1}{1,end+1} = runCond;
@@ -460,11 +504,17 @@ switch info.dataSetLabel
                 fListTask = dir(fullfile(dirs{end,1}.bids,'func',['*_task-' rCond{end,1}{1,end}.task     '_*.nii.gz']));
                 fList     = intersect(fullfile({fListAcq.folder },{fListAcq.name })',fullfile({fListTask.folder},{fListTask.name})');
                 rCond{end,1}{1,end}.fList = {};
-                if ~isempty(fList); rCond{end,1}{1,end}.fList = fList; end
-                % rCond{end,1}{1,end}.fList = dir(fullfile(dirs{end,1}.bids,'func',['*task-' rCond{end,1}{1,end}.task '*_angio.nii.gz']));
-                % rCond{end,1}{1,end}.fList = fullfile({rCond{end,1}{1,end}.fList.folder},{rCond{end,1}{1,end}.fList.name})';
+                if ~isempty(fList)
+                    rCond{end,1}{1,end}.fList = fList;
+                    tr = JSNread(rCond{end,1}{1,end}.fList,{'RepetitionTime' 'RepetitionTimeExcitation'});
+                    rCond{end,1}{1,end}.tr    = cat(1,tr{:,1}); %sec
+                    rCond{end,1}{1,end}.trExc = cat(1,tr{:,2}); %sec
+                    if isempty(rCond{end,1}{1,end}.trExc); rCond{end,1}{1,end}.trExc = rCond{end,1}{1,end}.tr; end
+                    nShot = round(rCond{end,1}{1,end}.tr ./ rCond{end,1}{1,end}.trExc);
+                    rCond{end,1}{1,end}.trExc = rCond{end,1}{1,end}.tr ./ nShot;
+                    rCond{end,1}{1,end}.nDummy = ceil(3./(rCond{end,1}{1,end}.trExc)./nShot);
+                end
                 rCond{end,1}{1,end}.date  = repmat(acqDate,size(rCond{end,1}{1,end}.fList));
-                rCond{end,1}{1,end}.nDummy = repmat(dummy,size(rCond{end,1}{1,end}.fList));
 
                 %%%%% 50sPrd1sDur
                 rCond{end,1}{1,end+1} = runCond;
@@ -489,8 +539,16 @@ switch info.dataSetLabel
                 rCond{end,1}{1,end}.dsgn  = dsgn;
                 rCond{end,1}{1,end}.fList = dir(fullfile(dirs{end,1}.bids,'func',['*task-' rCond{end,1}{1,end}.task '*_bold.nii.gz']));
                 rCond{end,1}{1,end}.fList = fullfile({rCond{end,1}{1,end}.fList.folder},{rCond{end,1}{1,end}.fList.name})';
+                if ~isempty(rCond{end,1}{1,end}.fList)
+                    tr = JSNread(rCond{end,1}{1,end}.fList,{'RepetitionTime' 'RepetitionTimeExcitation'});
+                    rCond{end,1}{1,end}.tr    = cat(1,tr{:,1}); %sec
+                    rCond{end,1}{1,end}.trExc = cat(1,tr{:,2}); %sec
+                    if isempty(rCond{end,1}{1,end}.trExc); rCond{end,1}{1,end}.trExc = rCond{end,1}{1,end}.tr; end
+                    nShot = round(rCond{end,1}{1,end}.tr ./ rCond{end,1}{1,end}.trExc);
+                    rCond{end,1}{1,end}.trExc = rCond{end,1}{1,end}.tr ./ nShot;
+                    rCond{end,1}{1,end}.nDummy = ceil(3./(rCond{end,1}{1,end}.trExc)./nShot);
+                end
                 rCond{end,1}{1,end}.date  = repmat(acqDate,size(rCond{end,1}{1,end}.fList));
-                rCond{end,1}{1,end}.nDummy = repmat(dummy,size(rCond{end,1}{1,end}.fList));
 
 
                 %%% Assert we are not missing any funcitonal files
@@ -564,12 +622,7 @@ switch info.dataSetLabel
         dbstack; error('code that')
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% for i = 1:length(rCond)
-%     tmp = [rCond{i}{:}];
-%     [{tmp.sub}
-%     {tmp.ses}]
-%     assertBehavior_RetinotopicStimulator2(rCond{i})
-% end
+
 
 
 
@@ -675,7 +728,7 @@ tof(ind)        = [];
 
 
 
-forceThis   = 0;
+forceThis   = 1;
 verboseThis = 1;
 %%%%%%%%%%%%%%%%%
 %% Initalize data
@@ -685,7 +738,7 @@ skipMask    = 1;
 runSet  = cell(size(rCond));
 volAnat = cell(size(rCond));
 
-sesIndList = 1:length(subList);
+sesIndList = 11%1:length(subList);
 for s = 1:length(subList(sesIndList))
     S = sesIndList(s);
 
@@ -858,7 +911,7 @@ end
 
 
 
-forceThis   = 0;
+forceThis   = 1;
 verboseThis = 1;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Within-run motion correction
@@ -916,7 +969,7 @@ end
 
 
 
-forceThis   = 0;
+forceThis   = 1;
 verboseThis = 1;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Between-run motion correction
@@ -973,7 +1026,7 @@ end
 
 
 
-forceThis   = 0;
+forceThis   = 1;
 verboseThis = 1;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Finalize preprocessing (apply transformations in a single interpolation step)
@@ -993,7 +1046,7 @@ end
 
 
 
-forceThis   = 0;
+forceThis   = 1;
 verboseThis = 0;
 %%%%%%%%%%%%%
 %% QA preproc
