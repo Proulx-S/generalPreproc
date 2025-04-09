@@ -122,6 +122,7 @@ switch info.dataSetLabel
         sesDbListTmp{end+1,1}{    1,1} = fullfile(info.dbDir,'vsmDiamCenSurP3/2025-01-17--bay2--vsmDiamCenSurP3');
 
         sesDbListTmp{end+1,1}{    1,1} = fullfile(info.dbDir,'vsmDiamCenSurP4/2025-01-20--bay2--vsmDiamCenSurP4');
+        % Error at acquisition: all stimulus runs actually showed no stimulus, only the fixation task. This happens to be the subject where we had a second slice prescroption 7mm more posterior.
 
         sesDbListTmp{end+1,1}{    1,1} = fullfile(info.dbDir,'vsmDiamCenSurP5/2025-01-23--bay2--vsmDiamCenSurP5');
         
@@ -605,15 +606,19 @@ switch info.dataSetLabel
 
             end
         end
-        % subList
-        % sesList
-        % s = 1;
-        % rCond{s}{:}
-        % pcMRA{s}.fList.name
-        % memprage{s}
-        % avMap{s}
-        % b0{s}.fList.name
-        % b1{s}.fList.name
+        subList
+        sesList
+        s = 15;
+        tmp = [rCond{s}{:}];
+        tmp.acq
+        tmp.tr
+        tmp.trExc
+        pcMRA{s}.fList.name
+        memprage{s}
+        avMap{s}.fList.name
+        tof{s}.fList
+        b0{s}.fList.name
+        b1{s}.fList.name
 
 
         
@@ -632,35 +637,55 @@ end
 for RS = 1:length(rCond)
     %%% Assert
     [S,str] = assertBids(rCond{RS});
+    % tmp = [rCond{RS}{:}];
+    % tmp(~cellfun('isempty',{tmp.fList}))
 
     %%% Correct special cases
     if isempty(S); continue; end
     for s = 1:length(S)
         switch str{s}
             case 'sub-vsmDiamCenSurP2_ses-1_acq-vfMRI_task-50sPrd5sDur'
-                % ignore this naming difference
-            case 'sub-vsmDiamCenSurP9_ses-1_acq-vfMRI_task-50sPrd5sDur'
-                % split the two different slice presciptions
-                ind = [2 2 2 1 1];
-                if size(rCond{RS}{S(s)}.fList,1)~=length(ind)
-                    disp('runSet already split');
-                    continue
+                % remove this naming difference
+                for r = 1:numel(rCond{RS}{S(s)}.fList)
+                    old = rCond{RS}{S(s)}.fList{r};
+                    new = strsplit(old,'_'); new(contains(new,'chunk-')) = []; new = strjoin(new,'_');
+                    if ~strcmp(old,new)
+                        movefile(        old                   ,        new                   );
+                        movefile(replace(old,'.nii.gz','.json'),replace(new,'.nii.gz','.json'));
+                        rCond{RS}{S(s)}.fList{r} = new;
+                    end
                 end
-                rCond{RS}{end+1} = rCond{RS}{S(s)};
-                rCond{RS}{S(s)}.fList(ind~=1)  = [];
-                rCond{RS}{S(s)}.date(ind~=1)   = [];
-                rCond{RS}{S(s)}.bhvr(ind~=1)   = [];
-                rCond{RS}{S(s)}.nDummy(ind~=1) = [];
-                rCond{RS}{end}.prsc = 'back7';
-                rCond{RS}{end}.fList(ind~=2)  = [];
-                rCond{RS}{end}.date(ind~=2)   = [];
-                rCond{RS}{end}.bhvr(ind~=2)   = [];
-                rCond{RS}{end}.nDummy(ind~=2) = [];
+            % case 'sub-vsmDiamCenSurP9_ses-1_acq-vfMRI_task-50sPrd5sDur' % not actually necessary anymore since this subject cannot be included because of an error at acquisition regarding stimulus presentation
+            %     % split the two different slice presciptions
+            %     ind = [2 2 2 1 1];
+            %     if size(rCond{RS}{S(s)}.fList,1)~=length(ind)
+            %         disp('runSet already split');
+            %         continue
+            %     end
+            %     rCond{RS}{end+1} = rCond{RS}{S(s)};
+            %     rCond{RS}{S(s)}.fList(ind~=1)  = [];
+            %     rCond{RS}{S(s)}.date(ind~=1)   = [];
+            %     rCond{RS}{S(s)}.bhvr(ind~=1)   = [];
+            %     rCond{RS}{S(s)}.nDummy(ind~=1) = [];
+            %     rCond{RS}{end}.prsc = 'back7';
+            %     rCond{RS}{end}.fList(ind~=2)  = [];
+            %     rCond{RS}{end}.date(ind~=2)   = [];
+            %     rCond{RS}{end}.bhvr(ind~=2)   = [];
+            %     rCond{RS}{end}.nDummy(ind~=2) = [];
             otherwise
                 dbstack; error('please specify how to deal with that special case')
         end
     end
 end
+
+% tmp = [rCond{:}];
+% tmp = [tmp{:}];
+% [{tmp.acq}' {tmp.prsc}']
+% {tmp.task}'
+% {tmp.fList}'
+% {tmp.date}'
+% {tmp.bhvr}'
+% {tmp.nDummy}'
 
 %%% Remove empty runCond
 for RS = 1:length(rCond)
@@ -723,24 +748,35 @@ tof(ind)        = [];
 % for RS = 1:length(rCond)
 %     assertBids(rCond{RS});
 % end
-%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 
 
-forceThis   = 1;
-verboseThis = 1;
+forceThis   = 0;
+verboseThis = 0;
 %%%%%%%%%%%%%%%%%
 %% Initalize data
 %%%%%%%%%%%%%%%%%
+disp('%%%%%%%%%%%%%%%%%')
+disp('%% Initalize data')
+disp('%%%%%%%%%%%%%%%%%')
 skipMask    = 1;
 
 runSet  = cell(size(rCond));
 volAnat = cell(size(rCond));
 
-sesIndList = 11%1:length(subList);
+sesIndList = 1:length(subList);
 for s = 1:length(subList(sesIndList))
     S = sesIndList(s);
+
+
+    if strcmp(subList{S},'vsmDiamCenSurP2')
+        forceThis = 1;
+    else
+        forceThis = 0;
+    end
+
 
     setList = [rCond{S}{:}];
     acqList  = {setList.acq}';
@@ -787,10 +823,13 @@ end
 
 
 forceThis   = 0;
-verboseThis = 1;
+verboseThis = 0;
 %%%%%%%%%%%%%%%%%
 %% Draw all masks
 %%%%%%%%%%%%%%%%%
+disp('%%%%%%%%%%%%%%%%%')
+disp('%% Draw all masks')
+disp('%%%%%%%%%%%%%%%%%')
 sesIndList  = 1:length(subList);
 
 %%% First check database for mask in bids derivative directory
@@ -911,11 +950,14 @@ end
 
 
 
-forceThis   = 1;
-verboseThis = 1;
+forceThis   = 0;
+verboseThis = 0;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Within-run motion correction
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+disp('%% Within-run motion correction')
+disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
 param.baseType = 'first'; % 'first' 'av' 'mcAv'
 
 for s = 1:length(subList(sesIndList))
@@ -969,11 +1011,15 @@ end
 
 
 
-forceThis   = 1;
-verboseThis = 1;
+forceThis   = 0;
+verboseThis = 0;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Between-run motion correction
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+disp('%% Between-run motion correction')
+disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+
 param.baseType = 'firstSes_firstRun_avFrame'; % 'firstSes_firstRun_avFrame'
 
 for s = 1:length(subList(sesIndList))
@@ -1026,11 +1072,14 @@ end
 
 
 
-forceThis   = 1;
-verboseThis = 1;
+forceThis   = 0;
+verboseThis = 0;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Finalize preprocessing (apply transformations in a single interpolation step)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+disp('%%%%%%%%%%%%%%%%%%%%%%%%%')
+disp('%% Finalize preprocessing')
+disp('%%%%%%%%%%%%%%%%%%%%%%%%%')
 
 for s = 1:length(subList(sesIndList))
     S = sesIndList(s);
@@ -1046,11 +1095,14 @@ end
 
 
 
-forceThis   = 1;
+forceThis   = 0;
 verboseThis = 0;
 %%%%%%%%%%%%%
 %% QA preproc
 %%%%%%%%%%%%%
+disp('%%%%%%%%%%%%%')
+disp('%% QA preproc')
+disp('%%%%%%%%%%%%%')
 [acqSet,subListU,QA] = runSet_combSes(runSet,subList,sesList);
 for S = 1:length(QA.fOrigList)
     for A = 1:length(QA.fOrigList{S})
@@ -1064,17 +1116,47 @@ QA.subList = subListU;
 
 
 
-forceThis   = 1;
+forceThis   = 0;
 verboseThis = 0;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Save proprocessing files
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
+disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+disp('%% Save proprocessing files')
+disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+
 if forceThis || ~exist(info.workFile,'file')
-    save(info.workFile,'runSet','subList','sesList','acqSet','QA','-v7.3');
+    %%% Clear figure handles to reduce file size
+    for i = 1:length(QA.fig)
+        for ii = 1:length(QA.fig{i})
+            QA.fig{i}{ii}.hBefore = [];
+            QA.fig{i}{ii}.hAfter  = [];
+        end
+    end
+
+    
+    %%% Save physio files separately because they are large
+    disp('saving phs separately')
+    try
+        save(replace(info.workFile,'.mat','_phs.mat'),'phs');
+    catch
+        save(replace(info.workFile,'.mat','_phs.mat'),'phs','-v7.3');
+    end
+
+    %%% Save other files
+    disp('saving other files')
+    phsOrig = phs; phs = []; phs.f = replace(info.workFile,'.mat','_phs.mat');
+    try
+        save(info.workFile,'rCond','runSet','subList','sesList','acqSet','QA','phs','volAnat');
+    catch
+        save(info.workFile,'rCond','runSet','subList','sesList','acqSet','QA','phs','volAnat','-v7.3');
+    end
+    
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%
 
 
+return
 
 
 else
@@ -1085,7 +1167,10 @@ else
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Load proprocessing files
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
-load(info.workFile,'runSet','subList','sesList','acqSet','QA');
+disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+disp('%% Load proprocessing files')
+disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+load(info.workFile,'rCond','runSet','subList','sesList','acqSet','QA','phs','volAnat');
 %% %%%%%%%%%%%%%%%%%%%%%%%%
 
 
@@ -1099,7 +1184,15 @@ if force || ~exist(info.indexFile,'file')
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Refactor and save data index file
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-save(info.indexFile,'rCond','QA','info','-v7.3');
+disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+disp('%% Refactor and save data index file')
+disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+
+% if isstruct(phs) && isfield(phs,'f') && ~isempty(phs.f) && exist(phs.f,'file')
+%     tmp = load(phs.f,'phs'); phs = tmp.phs;
+% end
+phs = [];
+
 % rCondOrig = rCond;
 % rCond = rCondOrig;
 [rCond ,subList ,runCondAcqList ,runCondStimList ] = set2cond5(runSet,rCond,phs,volAnat);
@@ -1108,7 +1201,11 @@ save(info.indexFile,'rCond','QA','info','-v7.3');
 % The idea would be to then store the index file there two
 % and have both the index and data in the same place
 % for further analysis that do not require comming back to preprocessing.
-save(info.indexFile,'rCond','QA','info','-v7.3');
+try
+    save(info.indexFile,'rCond','QA','info');
+catch
+    save(info.indexFile,'rCond','QA','info','-v7.3');
+end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 end
