@@ -771,11 +771,11 @@ for s = 1:length(subList(sesIndList))
     S = sesIndList(s);
 
 
-    if strcmp(subList{S},'vsmDiamCenSurP2')
-        forceThis = 1;
-    else
-        forceThis = 0;
-    end
+    % if strcmp(subList{S},'vsmDiamCenSurP2')
+    %     forceThis = 1;
+    % else
+    %     forceThis = 0;
+    % end
 
 
     setList = [rCond{S}{:}];
@@ -813,6 +813,22 @@ for s = 1:length(subList(sesIndList))
         runSet{S}{end}.nDummy = cat(1,tmp.nDummy);
         runSet{S}{end}.dbDir  = sesDbList{S};
 
+        %%% !!!!!!!!!!!!!!!!!!!!!!!!!!
+        %%% !!!!!!!!!!!!!!!!!!!!!!!!!!
+        %%% Look up previous run set for matching acquisition and prescription conditions. If found, grab the geometry from the first session for seamless between-run and between-session correction.
+        %%% !!!!!!!!!!!!!!!!!!!!!!!!!!
+        %%% !!!!!!!!!!!!!!!!!!!!!!!!!!
+        found = 0;
+        for ss = 1:S-1
+            for rsrs = 1:length(runSet{ss})
+                if strcmp(runSet{ss}{rsrs}.label,runSet{S}{end}.label) && strcmp(runSet{ss}{rsrs}.sub,runSet{S}{end}.sub)
+                    found = 1;
+                end
+                if found; break; end
+            end
+            if found; break; end
+        end
+        %%% Initialize
         if ~isempty(runSet{S}{end}.fList)
             runSet{S}{end} = initPreproc4(runSet{S}{end},[],[],skipMask,forceThis,verboseThis);
         end
@@ -959,20 +975,18 @@ disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
 disp('%% Within-run motion correction')
 disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
 param.baseType = 'first'; % 'first' 'av' 'mcAv'
-
 for s = 1:length(subList(sesIndList))
     S = sesIndList(s);
     for rs = 1:length(runSet{S})
         if isempty(runSet{S}{rs}.fList); continue; end
             acqLabel = strsplit(runSet{S}{rs}.label,'_'); acqLabel = replace(acqLabel(contains(acqLabel,'acq-')),'acq-','');
             if strcmp(acqLabel,'bold')
-                param.spSmFac  = []; % smoothing parameter (fraction of voxel size)
+                param.spSmFac  = []; % smoothing parameter (multiple of voxel size)
             else
-                param.spSmFac  = 3; % smoothing parameter (fraction of voxel size)
+                param.spSmFac  = 4; % smoothing parameter (multiple of voxel size)
             end
             fBase = [];
             fMask = runSet{S}{rs}.fMasks.fMaskInv;
-            
             try
                 runSet{S}{rs}.wrMocoFiles = estimMotionWR2(runSet{S}{rs}.initFiles,param,fBase,fMask,forceThis,verboseThis);
             catch
@@ -1057,7 +1071,7 @@ for s = 1:length(subList(sesIndList))
                 %%%% Set mask
                 fMask = fBase.fMasks.fMaskInv;
                 %%%% Set geometry
-                runSet{S}{rs}.wrMocoFiles.fGeomSes1 = fBase.initFiles.fGeom;
+                runSet{S}{rs}.brMocoFiles.fGeomSes1 = fBase.initFiles.fGeom;
                 %%%% Set base
                 fBase = fBase.wrMocoFiles.fMocoSmr.runAv.fList{1,1};
             otherwise
@@ -1069,7 +1083,6 @@ for s = 1:length(subList(sesIndList))
     end
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 
 
 forceThis   = 0;
@@ -1094,7 +1107,6 @@ end
 
 
 
-
 forceThis   = 0;
 verboseThis = 0;
 %%%%%%%%%%%%%
@@ -1112,6 +1124,90 @@ for S = 1:length(QA.fOrigList)
     end
 end
 QA.subList = subListU;
+
+
+% save tmpQA QA
+return
+close all
+% clear all
+forceThis = 1;
+load tmpQA
+
+
+
+for S = 3%1:length(QA.fig)
+    for A = 2%1:length(QA.fig{S})
+        fig = QA.fig{S}{A};
+        QA.dendoFig{S,1}{1,A}.fAfter = replace(fig.fAfter,'.fig','_dendo.fig');
+        if contains(fig.fAfter,'acq-bold'); continue; end
+        
+            
+        if forceThis || ~exist(QA.dendoFig{S,1}{1,A}.fAfter)
+            %%% Define clustering
+            [kI,k,hFig] = QAdendogram(fig.fAfter);
+            saveas(hFig,QA.dendoFig{S,1}{1,A}.fAfter);
+            close(hFig);
+        end
+    end
+end
+
+
+
+%% Censore bad timepoints
+%%% Plot QA correlation matrix
+fig = QA.fig{end}{2};
+fig.hAfter = open(fig.fAfter);
+fig.hAfter.UserData.fileNames
+tmp = strsplit(fig.hAfter.UserData.fileNames{1},'_'); tmp{contains(tmp,'run-')} = 'run-cat'; tmp = strjoin(tmp,'_')
+
+
+
+%%% Get correlation matrix
+ax = findobj(fig.hAfter.Children,'Type','Axes'    );
+cb = findobj(fig.hAfter.Children,'Type','ColorBar');
+im = findobj(ax,'Type','Image');
+rho = im.CData;
+
+%%% Explore clusters from QA correlation matrix
+Z = linkage(squareform(1-rho), 'average'); % Convert correlation to distance
+figure('WindowStyle','docked');
+[H, T, perm] = dendrogram(Z, 0, 'Reorder',1:length(rho),'ColorThreshold',0.2,'Orientation','right');
+ax = gca; ax.YDir = 'reverse';
+ax.YTick = [];
+
+k = 4;
+clusters_h = cluster(Z, 'maxclust', k); % Adjust number of clusters as needed
+
+
+
+%%% Plot all clusters
+% figure(fig.hAfter);
+yyaxis right
+plot(clusters_h,'k','LineWidth',2);
+ylim([0 k+1])
+ax.PlotBoxAspectRatio = [1 1 1];
+cb.Position(1) = cb.Position(1) + 0.05;
+
+%%% Plot largest cluster
+[a,b,c] = unique(clusters_h);
+cLarge = mode(c)==c;
+yyaxis left; hold on
+plot(cLarge.*size(rho,1).*0.05 + 1,'-m');
+
+cIn = false(size(rho,1),1);
+cIn = cIn|cLarge;
+cLarge = mode(c(~cIn))==c;
+plot(size(rho,1) - cLarge.*size(rho,1).*0.05,'-m');
+
+% %%% Choose clusters to keep
+% [a,b,c] = unique(clusters_h);
+% cKeep = mode(c)==c;
+% im.CData = rho;
+% im.CData(:,~cKeep) = nan;
+
+% cKeep = cKeep | mode(c(~cKeep))==c;
+% im.CData = rho;
+% im.CData(:,~cKeep) = nan;
 %% %%%%%%%%%%
 
 
@@ -1147,9 +1243,9 @@ if forceThis || ~exist(info.workFile,'file')
     disp('saving other files')
     phsOrig = phs; phs = []; phs.f = replace(info.workFile,'.mat','_phs.mat');
     try
-        save(info.workFile,'rCond','runSet','subList','sesList','acqSet','QA','phs','volAnat');
+        save(info.workFile,'rCond','runSet','subList','sesList','acqSet','QA','volAnat');
     catch
-        save(info.workFile,'rCond','runSet','subList','sesList','acqSet','QA','phs','volAnat','-v7.3');
+        save(info.workFile,'rCond','runSet','subList','sesList','acqSet','QA','volAnat','-v7.3');
     end
     
 end
@@ -1431,9 +1527,9 @@ ax = gca; ax.DataAspectRatio = [1 1 1]; ax.Colormap = gray;
 ax.XAxis.Visible = 'off'; ax.YAxis.Visible = 'off';
 nexttile
 hP = plot(squeeze(mean(reshape(imM',[400 80 5]),2)))
-ax2 = gca;
-linkprop([ax ax2],'PlotBoxAspectRatio');
-linkaxes([ax ax2],'x');
+ax1 = gca;
+linkprop([ax ax1],'PlotBoxAspectRatio');
+linkaxes([ax ax1],'x');
 for i = 1:length(hP)
     hL(i) = line(ax,[1 1],[1 80]+(i-1)*80)
     hL(i).Color = hP(i).Color;
@@ -1442,15 +1538,15 @@ for i = 1:length(hP)
     hL2(i).Color = hP(i).Color;
     hL2(i).LineWidth = 5;
 end
-xlabel(ax2,'frequency-encoding voxel index')
-ylabel(ax2,'MR signal (a.u.)')
+xlabel(ax1,'frequency-encoding voxel index')
+ylabel(ax1,'MR signal (a.u.)')
 
 delete([hX1 hX2 hY1]); clear hX1 hX2 hY1
 while 1
     [x,y] = ginput(1);
     if ~exist('hX1','var') || ~exist('hX2','var') || ~exist('hY1','var')
         hX1 = xline(ax,x,'r');
-        hX2 = xline(ax2,x,'r')
+        hX2 = xline(ax1,x,'r')
         hY1 = yline(ax,y,'r');
         drawnow
     else
@@ -1716,22 +1812,22 @@ for S = 1:size(rCond,1)
 
             ht  = cell(size(volPsd{S}));
             ax1 = cell(size(volPsd{S}));
-            ax2 = cell(size(volPsd{S}));
+            ax1 = cell(size(volPsd{S}));
             for r = 1:length(volPsd{S})
                 figure('WindowStyle','docked');
                 ht{r} = tiledlayout(1,2)
                 ax1{r} = nexttile;
                 plotSpecGram4(ax1{r},volPsd{S}(r),'trialGramMD','psdEPC',dsgn);
                 xlim auto
-                ax2{r} = nexttile;
-                plotSpecGram4(ax2{r},volPsd{S}(r),'trialGramMD','cohEPC',dsgn);
+                ax1{r} = nexttile;
+                plotSpecGram4(ax1{r},volPsd{S}(r),'trialGramMD','cohEPC',dsgn);
                 xlim auto
                 title(ht{r},[subList{S} ';run ' num2str(r) '/' num2str(length(volPsd{S}))])
             end
             cLim = get([ax1{:}],'CLim'); cLim = [cLim{:}]; cLim = [min(cLim) max(cLim)];
             set([ax1{:}],'CLim',cLim);
-            cLim = get([ax2{:}],'CLim'); cLim = [cLim{:}]; cLim = [min(cLim) max(cLim)];
-            set([ax2{:}],'CLim',cLim);
+            cLim = get([ax1{:}],'CLim'); cLim = [cLim{:}]; cLim = [min(cLim) max(cLim)];
+            set([ax1{:}],'CLim',cLim);
 
 
             
@@ -2243,7 +2339,7 @@ ht1 = cell(size(res.f,1));
 ax1 = cell(size(res.f,1),length(voxClassList));
 f2  = cell(size(res.f,1));
 ht2 = cell(size(res.f,1));
-ax2 = cell(size(res.f,1),length(voxClassList));
+ax1 = cell(size(res.f,1),length(voxClassList));
 for S = 1:size(res.f,1)
     fFig1{S} = figure('WindowStyle','docked');
     ht1{S} = tiledlayout(2,2); ht1{S,C}.Padding = 'tight'; ht1{S,C}.TileSpacing = 'tight';
@@ -2257,7 +2353,7 @@ for S = 1:size(res.f,1)
             continue
         else
             ax1{S,V} = nexttile(ht1{S}); hold(ax1{S,V},'on');
-            ax2{S,V} = nexttile(ht2{S}); hold(ax2{S,V},'on');
+            ax1{S,V} = nexttile(ht2{S}); hold(ax1{S,V},'on');
         end
         Cok = false(1,size(res.f,2));
         t = [];
@@ -2269,7 +2365,7 @@ for S = 1:size(res.f,1)
                     res.t{S,C},...
                     res.(['resp' voxClass]){S,C},...
                     'color',cMap(C,:));
-                plot3(ax2{S,V},...
+                plot3(ax1{S,V},...
                     res.t{S,C},...
                     repmat(res.f(S,C),size(res.t{S,C})),...
                     res.(['resp' voxClass]){S,C},...
@@ -2281,20 +2377,20 @@ for S = 1:size(res.f,1)
             end
         end
         grid(ax1{S,V},'on')
-        grid(ax2{S,V},'on')
+        grid(ax1{S,V},'on')
         axis(ax1{S,V},'tight')
-        axis(ax2{S,V},'tight')
+        axis(ax1{S,V},'tight')
         sz = cell2mat(res.(['resp' voxClass 'Sz'])(S,:)');
         if V==2
             legend(ax1{S,V},...
                 strcat(res.task(S,Cok)','; nRun=', cellstr(num2str(sz(:,3)))),...
                 'AutoUpdate','off','Box','off');
-            legend(ax2{S,V},...
+            legend(ax1{S,V},...
                 strcat(res.task(S,Cok)','; nRun=', cellstr(num2str(sz(:,3)))),...
                 'AutoUpdate','off','Box','off');
         end
         title(ax1{S,V},[subList{S} '; nVox=' num2str(sz(1,2)) '; ' voxClass])
-        title(ax2{S,V},[subList{S} '; nVox=' num2str(sz(1,2)) '; ' voxClass])
+        title(ax1{S,V},[subList{S} '; nVox=' num2str(sz(1,2)) '; ' voxClass])
         uistack(yline(ax1{S,V},0),'bottom');
 
 
@@ -2303,19 +2399,19 @@ for S = 1:size(res.f,1)
         % Y = interp2(t,f,y,T(:),F(:));
         % surf(t,f,y)
         
-        xlabel(ax2{S,V},'time (s)')
-        ylabel(ax2{S,V},'stim freq (Hz)')
-        zlabel(ax2{S,V},'MR signal change (a.u.)')
+        xlabel(ax1{S,V},'time (s)')
+        ylabel(ax1{S,V},'stim freq (Hz)')
+        zlabel(ax1{S,V},'MR signal change (a.u.)')
     end
-    set([ax2{S,:}],'view',[-15 20]);
+    set([ax1{S,:}],'view',[-15 20]);
 
     yLim1{S} = get([ax1{S,:}],'ylim'); yLim1{S} = [-1 1].*max(abs([yLim1{S}{:}])); set([ax1{S,:}],'ylim',yLim1{S});
-    zLim2{S} = get([ax2{S,:}],'zlim'); zLim2{S} = [-1 1].*max(abs([zLim2{S}{:}])); set([ax2{S,:}],'zlim',zLim2{S});
+    zLim2{S} = get([ax1{S,:}],'zlim'); zLim2{S} = [-1 1].*max(abs([zLim2{S}{:}])); set([ax1{S,:}],'zlim',zLim2{S});
 end
 drawnow
 xLim1 = get([ax1{:}],'xlim'); xLim1 = [min([xLim1{:}]) max([xLim1{:}])]; set([ax1{:}],'xlim',xLim1);
-xLim2 = get([ax2{:}],'xlim'); xLim2 = [min([xLim2{:}]) max([xLim2{:}])]; set([ax2{:}],'xlim',xLim2);
-yLim2 = get([ax2{:}],'ylim'); yLim2 = [min([yLim2{:}]) max([yLim2{:}])]; set([ax2{:}],'ylim',yLim2);
+xLim2 = get([ax1{:}],'xlim'); xLim2 = [min([xLim2{:}]) max([xLim2{:}])]; set([ax1{:}],'xlim',xLim2);
+yLim2 = get([ax1{:}],'ylim'); yLim2 = [min([yLim2{:}]) max([yLim2{:}])]; set([ax1{:}],'ylim',yLim2);
 
 
 
@@ -2369,7 +2465,7 @@ nRun = zeros(length(subList),size(res.f,2),length(voxClassList));
 nVox = zeros(length(subList),size(res.f,2),length(voxClassList));
 for V = 1:length(voxClassList)
     voxClass = voxClassList{V};
-    ax3{V} = nexttile(ht3); hold(ax3{V},'on');
+    ax2{V} = nexttile(ht3); hold(ax2{V},'on');
     Cok = false(1,size(res.f,2));
     for C = 1:size(res.f,2)
         if all(isnan(res.f(:,C))); continue; end
@@ -2392,15 +2488,15 @@ for V = 1:length(voxClassList)
     end
     if V==2
         tmp = replace(runCondStimList_tmp,'task_','')
-        legend(ax3{1,V},...
+        legend(ax2{1,V},...
             tmp(Cok)',...
             'AutoUpdate','off','Box','off','interpreter','none','location','southeast');
     end
 end
 set([hEr{:}],'CapSize',0)
-set([ax3{:}],'XLim',[0 20])
-grid([ax3{:}],'on')
-yLim = get([ax3{:}],'YLim'); set([ax3{:}],'YLim',[-1 1].*max(abs([yLim{:}])));
+set([ax2{:}],'XLim',[0 20])
+grid([ax2{:}],'on')
+yLim = get([ax2{:}],'YLim'); set([ax2{:}],'YLim',[-1 1].*max(abs([yLim{:}])));
 % Plot 3 conditions
 fFlag = 0; % for a 3D render
 f4 = figure('WindowStyle','docked');
@@ -2607,7 +2703,7 @@ ht1 = cell(size(res.f,1));
 ax1 = cell(size(res.f,1),length(voxClassList));
 f2  = cell(size(res.f,1));
 ht2 = cell(size(res.f,1));
-ax2 = cell(size(res.f,1),length(voxClassList));
+ax1 = cell(size(res.f,1),length(voxClassList));
 for S = 1:size(res.f,1)
     fFig1{S} = figure('WindowStyle','docked');
     ht1{S} = tiledlayout(2,2); ht1{S,C}.Padding = 'tight'; ht1{S,C}.TileSpacing = 'tight';
@@ -2621,7 +2717,7 @@ for S = 1:size(res.f,1)
             continue
         else
             ax1{S,V} = nexttile(ht1{S}); hold(ax1{S,V},'on');
-            ax2{S,V} = nexttile(ht2{S}); hold(ax2{S,V},'on');
+            ax1{S,V} = nexttile(ht2{S}); hold(ax1{S,V},'on');
         end
         Cok = false(1,size(res.f,2));
         t = [];
@@ -2633,7 +2729,7 @@ for S = 1:size(res.f,1)
                     res.t{S,C},...
                     res.(['resp' voxClass]){S,C},...
                     'color',cMap(C,:));
-                plot3(ax2{S,V},...
+                plot3(ax1{S,V},...
                     res.t{S,C},...
                     repmat(res.f(S,C),size(res.t{S,C})),...
                     res.(['resp' voxClass]){S,C},...
@@ -2645,20 +2741,20 @@ for S = 1:size(res.f,1)
             end
         end
         grid(ax1{S,V},'on')
-        grid(ax2{S,V},'on')
+        grid(ax1{S,V},'on')
         axis(ax1{S,V},'tight')
-        axis(ax2{S,V},'tight')
+        axis(ax1{S,V},'tight')
         sz = cell2mat(res.(['resp' voxClass 'Sz'])(S,:)');
         if V==2
             legend(ax1{S,V},...
                 strcat(res.task(S,Cok)','; nRun=', cellstr(num2str(sz(:,3)))),...
                 'AutoUpdate','off','Box','off');
-            legend(ax2{S,V},...
+            legend(ax1{S,V},...
                 strcat(res.task(S,Cok)','; nRun=', cellstr(num2str(sz(:,3)))),...
                 'AutoUpdate','off','Box','off');
         end
         title(ax1{S,V},[subList{S} '; nVox=' num2str(sz(1,2)) '; ' voxClass])
-        title(ax2{S,V},[subList{S} '; nVox=' num2str(sz(1,2)) '; ' voxClass])
+        title(ax1{S,V},[subList{S} '; nVox=' num2str(sz(1,2)) '; ' voxClass])
         uistack(yline(ax1{S,V},0),'bottom');
 
 
@@ -2667,19 +2763,19 @@ for S = 1:size(res.f,1)
         % Y = interp2(t,f,y,T(:),F(:));
         % surf(t,f,y)
         
-        xlabel(ax2{S,V},'time (s)')
-        ylabel(ax2{S,V},'stim freq (Hz)')
-        zlabel(ax2{S,V},'MR signal change (a.u.)')
+        xlabel(ax1{S,V},'time (s)')
+        ylabel(ax1{S,V},'stim freq (Hz)')
+        zlabel(ax1{S,V},'MR signal change (a.u.)')
     end
-    set([ax2{S,:}],'view',[-15 20]);
+    set([ax1{S,:}],'view',[-15 20]);
 
     yLim1{S} = get([ax1{S,:}],'ylim'); yLim1{S} = [-1 1].*max(abs([yLim1{S}{:}])); set([ax1{S,:}],'ylim',yLim1{S});
-    zLim2{S} = get([ax2{S,:}],'zlim'); zLim2{S} = [-1 1].*max(abs([zLim2{S}{:}])); set([ax2{S,:}],'zlim',zLim2{S});
+    zLim2{S} = get([ax1{S,:}],'zlim'); zLim2{S} = [-1 1].*max(abs([zLim2{S}{:}])); set([ax1{S,:}],'zlim',zLim2{S});
 end
 drawnow
 xLim1 = get([ax1{:}],'xlim'); xLim1 = [min([xLim1{:}]) max([xLim1{:}])]; set([ax1{:}],'xlim',xLim1);
-xLim2 = get([ax2{:}],'xlim'); xLim2 = [min([xLim2{:}]) max([xLim2{:}])]; set([ax2{:}],'xlim',xLim2);
-yLim2 = get([ax2{:}],'ylim'); yLim2 = [min([yLim2{:}]) max([yLim2{:}])]; set([ax2{:}],'ylim',yLim2);
+xLim2 = get([ax1{:}],'xlim'); xLim2 = [min([xLim2{:}]) max([xLim2{:}])]; set([ax1{:}],'xlim',xLim2);
+yLim2 = get([ax1{:}],'ylim'); yLim2 = [min([yLim2{:}]) max([yLim2{:}])]; set([ax1{:}],'ylim',yLim2);
 
 
 
@@ -2733,7 +2829,7 @@ nRun = zeros(length(subList),size(res.f,2),length(voxClassList));
 nVox = zeros(length(subList),size(res.f,2),length(voxClassList));
 for V = 1:length(voxClassList)
     voxClass = voxClassList{V};
-    ax3{V} = nexttile(ht3); hold(ax3{V},'on');
+    ax2{V} = nexttile(ht3); hold(ax2{V},'on');
     Cok = false(1,size(res.f,2));
     for C = 1:size(res.f,2)
         if all(isnan(res.f(:,C))); continue; end
@@ -2756,15 +2852,15 @@ for V = 1:length(voxClassList)
     end
     if V==2
         tmp = replace(runCondStimList_tmp,'task_','')
-        legend(ax3{1,V},...
+        legend(ax2{1,V},...
             tmp(Cok)',...
             'AutoUpdate','off','Box','off','interpreter','none','location','southeast');
     end
 end
 set([hEr{:}],'CapSize',0)
-set([ax3{:}],'XLim',[0 20])
-grid([ax3{:}],'on')
-yLim = get([ax3{:}],'YLim'); set([ax3{:}],'YLim',[-1 1].*max(abs([yLim{:}])));
+set([ax2{:}],'XLim',[0 20])
+grid([ax2{:}],'on')
+yLim = get([ax2{:}],'YLim'); set([ax2{:}],'YLim',[-1 1].*max(abs([yLim{:}])));
 % Plot 3 conditions
 fFlag = 0; % for a 3D render
 f4 = figure('WindowStyle','docked');
