@@ -96,7 +96,7 @@ switch info.dataSetLabel
         %%% Preprocessing location
         info.prcDir = fullfile(scratchDir,workScript,info.dataSetLabel); if ~exist(info.prcDir,'dir'); mkdir(info.prcDir); end
 
-        %%% Subject and session info
+        %%% Subject and session info [!!! sessions from the same subject must be entered in order of acquisition !!!]
         sesDbListTmp = {};
         % sesDbListTmp{end+1,1}{    1,1} = fullfile(info.dbDir,'');
         % sesDbListTmp{end  ,1}{end+1,1} = fullfile(info.dbDir,'');
@@ -771,13 +771,6 @@ for s = 1:length(subList(sesIndList))
     S = sesIndList(s);
 
 
-    % if strcmp(subList{S},'vsmDiamCenSurP2')
-    %     forceThis = 1;
-    % else
-    %     forceThis = 0;
-    % end
-
-
     setList = [rCond{S}{:}];
     acqList  = {setList.acq}';
     prscList = {setList.prsc}'; prscList(cellfun('isempty',prscList)) = {'dflt'};
@@ -813,24 +806,34 @@ for s = 1:length(subList(sesIndList))
         runSet{S}{end}.nDummy = cat(1,tmp.nDummy);
         runSet{S}{end}.dbDir  = sesDbList{S};
 
-        %%% !!!!!!!!!!!!!!!!!!!!!!!!!!
-        %%% !!!!!!!!!!!!!!!!!!!!!!!!!!
         %%% Look up previous run set for matching acquisition and prescription conditions. If found, grab the geometry from the first session for seamless between-run and between-session correction.
-        %%% !!!!!!!!!!!!!!!!!!!!!!!!!!
-        %%% !!!!!!!!!!!!!!!!!!!!!!!!!!
         found = 0;
-        for ss = 1:S-1
+        fGeomSes1 = [];
+        for ss = 1:S
             for rsrs = 1:length(runSet{ss})
                 if strcmp(runSet{ss}{rsrs}.label,runSet{S}{end}.label) && strcmp(runSet{ss}{rsrs}.sub,runSet{S}{end}.sub)
                     found = 1;
+                    geomRef = runSet{ss}{rsrs}.fList(1);
                 end
                 if found; break; end
             end
             if found; break; end
         end
+
+
+        %!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        %!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        if strcmp(runSet{S}{end}.fList{1},geomRef)
+            forceThis = 0;
+        else
+            forceThis = 1;
+        end
+        %!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        %!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
         %%% Initialize
         if ~isempty(runSet{S}{end}.fList)
-            runSet{S}{end} = initPreproc4(runSet{S}{end},[],[],skipMask,forceThis,verboseThis);
+            runSet{S}{end} = initPreproc4(runSet{S}{end},geomRef,[],skipMask,forceThis,verboseThis);
         end
     end
 end
@@ -854,6 +857,16 @@ for s = 1:length(subList(sesIndList))
     for rs = 1:length(runSet{S})
         if isempty(runSet{S}{rs}.fList); continue; end
 
+        %!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        %!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        if ~ismember(runSet{S}{rs}.initFiles.fGeom,runSet{S}{rs}.initFiles.fList)
+            forceThis = 1;
+        else
+            forceThis = 0;
+        end
+        %!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        %!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        
         %%% Get preproc mask filenames
         runSet{S}{rs}.dbDirBidsDeriv = fullfile(runSet{S}{rs}.dbDir,'bids','derivatives');
         fBase = char(runSet{S}{rs}.initFiles.fPlumbSmr.sesCat.runAv.fList(:,1));
@@ -869,9 +882,15 @@ for s = 1:length(subList(sesIndList))
         % fDbMask = fullfile(runSet{S}{rs}.dbDirBidsDeriv,fDbMask);
 
         %%% Copy from db if exists
-        if ~forceThis && exist(fDbMaskInv,'file')% && exist(fDbMask,'file')
+        if ~forceThis && exist(fDbMaskInv,'file')
             copyfile(fDbMaskInv,runSet{S}{rs}.fMasks.fMaskInv);
             % copyfile(fDbMask,runSet{S}{rs}.fMasks.fMask);
+        end
+        if forceThis && exist(runSet{S}{rs}.fMasks.fMaskInv,'file')
+            removefile(runSet{S}{rs}.fMasks.fMaskInv);
+            if exist(fDbMaskInv,'file')
+                removefile(fDbMaskInv);
+            end
         end
     end
 end
@@ -899,8 +918,8 @@ for s = 1:length(subList(sesIndList))
         end
     end
 end
-% clipboard('copy',strjoin(cmd,newline));
-% Write commands to a file instead of copying to clipboard
+
+%%% Write commands to a file instead of copying to clipboard
 if length(cmd)==1
     disp('all masks found in database bids derivative, no need to draw')
 else
@@ -922,7 +941,6 @@ else
     end
     disp('++++++++++++++++++++++++++++++++++++++++')
 end
-
 
 %%% Invert mask
 for s = 1:length(subList(sesIndList))
@@ -979,44 +997,57 @@ for s = 1:length(subList(sesIndList))
     S = sesIndList(s);
     for rs = 1:length(runSet{S})
         if isempty(runSet{S}{rs}.fList); continue; end
-            acqLabel = strsplit(runSet{S}{rs}.label,'_'); acqLabel = replace(acqLabel(contains(acqLabel,'acq-')),'acq-','');
-            if strcmp(acqLabel,'bold')
-                param.spSmFac  = []; % smoothing parameter (multiple of voxel size)
-            else
-                param.spSmFac  = 4; % smoothing parameter (multiple of voxel size)
-            end
-            fBase = [];
-            fMask = runSet{S}{rs}.fMasks.fMaskInv;
-            try
-                runSet{S}{rs}.wrMocoFiles = estimMotionWR2(runSet{S}{rs}.initFiles,param,fBase,fMask,forceThis,verboseThis);
-            catch
-                tmp = fullfile(workDir,['S-' num2str(S) '_RS-' num2str(S)]);
-                save(fullfile(tmp,'motion_correction_error.mat'));
-            end
 
-            % % % % % % compute all costs
-            % % % % % r = 1;
-            % % % % % tmp = [];
-            % % % % % tmp.initFiles = runSet{S}{rs}.initFiles;
-            % % % % % tmp.initFiles.fList = tmp.initFiles.fList(r,:);
-            % % % % % tmp.initFiles.nDummy = tmp.initFiles.nDummy(r,:);
-            % % % % % tmp.initFiles.fOrigList = tmp.initFiles.fOrigList(r,:);
-            % % % % % tmp.initFiles.acqTime = tmp.initFiles.acqTime(r,:);
-            % % % % % tmp.initFiles.bidsList = tmp.initFiles.bidsList(r,:);
-            % % % % % tmp.initFiles.nFrame = tmp.initFiles.nFrame(r,:);
-            % % % % % tmp.initFiles.vSize = tmp.initFiles.vSize(r,:);
-            % % % % % tmp.initFiles.fPlumbList = tmp.initFiles.fPlumbList(r,:);
-            % % % % % tmp.initFiles.fEstimList = tmp.initFiles.fEstimList(r,:);
-            % % % % % tmp.initFiles.fEstimList = {[tmp.initFiles.fEstimList{1} '[300..$]']};
-            % % % % % tmp.wrMocoFiles = estimMotionWR2(tmp.initFiles,param,fBase,fMask,1,2);
-            % % % % % param1D = strsplit(tmp.wrMocoFiles.cmd{1}{contains(tmp.wrMocoFiles.cmd{1},'1Dparam_save')},' '); param1D = [param1D{2} '.param.1D'];
-            % % % % % % add 6 zeros to each row of param1D
-            % % % % % tmp.wrMocoFiles.cmd{1}{end+1} = ['-allcostX1D ' param1D ' ' replace(param1D,'.param.1D','.cost')];
-            % % % % % tmp.wrMocoFiles.cmd{1}{end-1} = [tmp.wrMocoFiles.cmd{1}{end-1} ' \'];
-            % % % % % % loop over base image to get cross-frame correlation
-            % % % % % % matrix the idea is that one may derive to best
-            % % % % % % reference by averaging only the frames that correlate
-            % % % % % % the best among each other
+        %!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        %!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        if ~ismember(runSet{S}{rs}.initFiles.fGeom,runSet{S}{rs}.initFiles.fList)
+            forceThis = 1;
+        else
+            forceThis = 0;
+        end
+        %!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        %!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        
+
+
+        acqLabel = strsplit(runSet{S}{rs}.label,'_'); acqLabel = replace(acqLabel(contains(acqLabel,'acq-')),'acq-','');
+        if strcmp(acqLabel,'bold')
+            param.spSmFac  = []; % smoothing parameter (multiple of voxel size)
+        else
+            param.spSmFac  = 4; % smoothing parameter (multiple of voxel size)
+        end
+        fBase = [];
+        fMask = runSet{S}{rs}.fMasks.fMaskInv;
+        try
+            runSet{S}{rs}.wrMocoFiles = estimMotionWR2(runSet{S}{rs}.initFiles,param,fBase,fMask,forceThis,verboseThis);
+        catch
+            tmp = fullfile(workDir,['S-' num2str(S) '_RS-' num2str(S)]);
+            save(fullfile(tmp,'motion_correction_error.mat'));
+        end
+
+        % % % % % % compute all costs
+        % % % % % r = 1;
+        % % % % % tmp = [];
+        % % % % % tmp.initFiles = runSet{S}{rs}.initFiles;
+        % % % % % tmp.initFiles.fList = tmp.initFiles.fList(r,:);
+        % % % % % tmp.initFiles.nDummy = tmp.initFiles.nDummy(r,:);
+        % % % % % tmp.initFiles.fOrigList = tmp.initFiles.fOrigList(r,:);
+        % % % % % tmp.initFiles.acqTime = tmp.initFiles.acqTime(r,:);
+        % % % % % tmp.initFiles.bidsList = tmp.initFiles.bidsList(r,:);
+        % % % % % tmp.initFiles.nFrame = tmp.initFiles.nFrame(r,:);
+        % % % % % tmp.initFiles.vSize = tmp.initFiles.vSize(r,:);
+        % % % % % tmp.initFiles.fPlumbList = tmp.initFiles.fPlumbList(r,:);
+        % % % % % tmp.initFiles.fEstimList = tmp.initFiles.fEstimList(r,:);
+        % % % % % tmp.initFiles.fEstimList = {[tmp.initFiles.fEstimList{1} '[300..$]']};
+        % % % % % tmp.wrMocoFiles = estimMotionWR2(tmp.initFiles,param,fBase,fMask,1,2);
+        % % % % % param1D = strsplit(tmp.wrMocoFiles.cmd{1}{contains(tmp.wrMocoFiles.cmd{1},'1Dparam_save')},' '); param1D = [param1D{2} '.param.1D'];
+        % % % % % % add 6 zeros to each row of param1D
+        % % % % % tmp.wrMocoFiles.cmd{1}{end+1} = ['-allcostX1D ' param1D ' ' replace(param1D,'.param.1D','.cost')];
+        % % % % % tmp.wrMocoFiles.cmd{1}{end-1} = [tmp.wrMocoFiles.cmd{1}{end-1} ' \'];
+        % % % % % % loop over base image to get cross-frame correlation
+        % % % % % % matrix the idea is that one may derive to best
+        % % % % % % reference by averaging only the frames that correlate
+        % % % % % % the best among each other
             
     end
 end
@@ -1042,6 +1073,20 @@ for s = 1:length(subList(sesIndList))
         if isempty(runSet{S}{rs}.fList); continue; end
         acqLabel = strsplit(runSet{S}{rs}.label,'_'); acqLabel = char(replace(acqLabel(contains(acqLabel,'acq-')),'acq-',''));
         
+
+
+        %!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        %!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        if ~ismember(runSet{S}{rs}.initFiles.fGeom,runSet{S}{rs}.initFiles.fList)
+            forceThis = 1;
+        else
+            forceThis = 0;
+        end
+        %!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        %!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        
+
+
         %%% Set smoothing parameter
         switch acqLabel
             case 'bold'
@@ -1098,6 +1143,18 @@ for s = 1:length(subList(sesIndList))
     S = sesIndList(s);
     for rs = 1:length(runSet{S})
         if isempty(runSet{S}{rs}.fList); continue; end
+
+
+        %!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        %!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        if ~ismember(runSet{S}{rs}.initFiles.fGeom,runSet{S}{rs}.initFiles.fList)
+            forceThis = 1;
+        else
+            forceThis = 0;
+        end
+        %!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        %!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        
         initFiles    = runSet{S}{rs}.initFiles;
         preprocFiles = cat(3,{runSet{S}{rs}.wrMocoFiles},{runSet{S}{rs}.brMocoFiles});
         runSet{S}{rs}.finalFiles = finalizePreproc6(initFiles,preprocFiles,forceThis,verboseThis);
@@ -1107,7 +1164,7 @@ end
 
 
 
-forceThis   = 0;
+forceThis   = 1;
 verboseThis = 0;
 %%%%%%%%%%%%%
 %% QA preproc
@@ -1126,7 +1183,7 @@ end
 QA.subList = subListU;
 
 
-% save tmpQA QA
+save tmpQA QA
 return
 close all
 % clear all
