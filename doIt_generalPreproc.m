@@ -74,7 +74,7 @@ info.workFile     = fullfile(info.workDir,[info.dataSetLabel '_' replace(workScr
 info.indexFile    = fullfile(info.workDir,[info.dataSetLabel '_indexFile.mat']);
 %% %%%%%%%%%%%%%%%%%%
 
-
+return
 
 if force || ~exist(info.workFile,'file')
 
@@ -820,17 +820,6 @@ for s = 1:length(subList(sesIndList))
             if found; break; end
         end
 
-
-        %!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        %!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        if strcmp(runSet{S}{end}.fList{1},geomRef)
-            forceThis = 0;
-        else
-            forceThis = 1;
-        end
-        %!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        %!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
         %%% Initialize
         if ~isempty(runSet{S}{end}.fList)
             runSet{S}{end} = initPreproc4(runSet{S}{end},geomRef,[],skipMask,forceThis,verboseThis);
@@ -856,18 +845,7 @@ for s = 1:length(subList(sesIndList))
     S = sesIndList(s);
     for rs = 1:length(runSet{S})
         if isempty(runSet{S}{rs}.fList); continue; end
-
-        %!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        %!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        if ~ismember(runSet{S}{rs}.initFiles.fGeom,runSet{S}{rs}.initFiles.fList)
-            forceThis = 1;
-        else
-            forceThis = 0;
-        end
-        %!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        %!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        
-        %%% Get preproc mask filenames
+        %%% Set preproc mask filenames
         runSet{S}{rs}.dbDirBidsDeriv = fullfile(runSet{S}{rs}.dbDir,'bids','derivatives');
         fBase = char(runSet{S}{rs}.initFiles.fPlumbSmr.sesCat.runAv.fList(:,1));
         runSet{S}{rs}.fMasks.fMaskInv = replace(fBase,'_volTs.nii.gz','_volBrainMaskInv.nii.gz');
@@ -881,16 +859,36 @@ for s = 1:length(subList(sesIndList))
         % fDbMask = strjoin(fDbMask(end-2:end),filesep);
         % fDbMask = fullfile(runSet{S}{rs}.dbDirBidsDeriv,fDbMask);
 
+
+
+        %%% Restore BK
+        % BK = dir('/local/users/Proulx-S/db/*/*/bids/derivatives/*/*/*_volBrainMaskInv.nii.gz');
+        % for m = 1:length(BK)
+        %     MRIread(fullfile(BK(m).folder,BK(m).name))
+        %     copyfile(fullfile(BK(m).folder,BK(m).name),replace(fullfile(BK(m).folder,BK(m).name),'BK.nii.gz','.nii.gz'));
+        %     % [~,b] = fileparts(BK(m).name);
+        % end
+
+
         %%% Copy from db if exists
         if ~forceThis && exist(fDbMaskInv,'file')
             copyfile(fDbMaskInv,runSet{S}{rs}.fMasks.fMaskInv);
-            % copyfile(fDbMask,runSet{S}{rs}.fMasks.fMask);
         end
-        if forceThis && exist(runSet{S}{rs}.fMasks.fMaskInv,'file')
-            removefile(runSet{S}{rs}.fMasks.fMaskInv);
-            if exist(fDbMaskInv,'file')
-                removefile(fDbMaskInv);
+
+        %%% Adjust geometry in case mask was defined on a different one.
+        if exist(runSet{S}{rs}.fMasks.fMaskInv,'file')
+            if ~exist(fBase,'file'); dbstack; error('X'); end
+            mriBase = MRIread(fBase                        ,1);
+            mriMask = MRIread(runSet{S}{rs}.fMasks.fMaskInv  );
+            mriBase.vol = mriMask.vol; clear mriMask
+            MRIwrite(mriBase,runSet{S}{rs}.fMasks.fMaskInv); clear mriBase
+            if exist(fDbMaskInv,'file') && forceThis
+                % Move db mask to BK only when forceThis to allow saving a new mask
+                movefile(fDbMaskInv,replace(fDbMaskInv,'.nii.gz','BK.nii.gz'));
             end
+        end
+        if exist(runSet{S}{rs}.fMasks.fMask,'file')
+            delete(runSet{S}{rs}.fMasks.fMask)
         end
     end
 end
@@ -965,17 +963,17 @@ for s = 1:length(subList(sesIndList))
         runSet{S}{rs}.dbDirBidsDeriv = fullfile(runSet{S}{rs}.dbDir,'bids','derivatives');
         
         [a,b,~] = fileparts(replace(runSet{S}{rs}.fMasks.fMask,'.nii.gz','')); [a1,b1,~] = fileparts(a); [a11,b11,~] = fileparts(a1);
-        fMask = fullfile(runSet{S}{rs}.dbDirBidsDeriv,b11,b1,[b '.nii.gz']);
-        if ~exist(fileparts(fMask),'dir'); mkdir(fileparts(fMask)); end
+        fMaskDb = fullfile(runSet{S}{rs}.dbDirBidsDeriv,b11,b1,[b '.nii.gz']);
+        if ~exist(fileparts(fMaskDb),'dir'); mkdir(fileparts(fMaskDb)); end
         [a,b,~] = fileparts(replace(runSet{S}{rs}.fMasks.fMaskInv,'.nii.gz','')); [a1,b1,~] = fileparts(a); [a11,b11,~] = fileparts(a1);
-        fMaskInv = fullfile(runSet{S}{rs}.dbDirBidsDeriv,b11,b1,[b '.nii.gz']);
-        if ~exist(fileparts(fMaskInv),'dir'); mkdir(fileparts(fMaskInv)); end
+        fMaskDbInv = fullfile(runSet{S}{rs}.dbDirBidsDeriv,b11,b1,[b '.nii.gz']);
+        if ~exist(fileparts(fMaskDbInv),'dir'); mkdir(fileparts(fMaskDbInv)); end
 
-        if forceThis || ~exist(fMask,'file')
-            copyfile(runSet{S}{rs}.fMasks.fMask,fMask);
+        if forceThis || ~exist(fMaskDb,'file')
+            copyfile(runSet{S}{rs}.fMasks.fMask,fMaskDb);
         end
-        if forceThis || ~exist(fMaskInv,'file')
-            copyfile(runSet{S}{rs}.fMasks.fMaskInv,fMaskInv);
+        if forceThis || ~exist(fMaskDbInv,'file')
+            copyfile(runSet{S}{rs}.fMasks.fMaskInv,fMaskDbInv);
         end
     end
 end
@@ -997,19 +995,6 @@ for s = 1:length(subList(sesIndList))
     S = sesIndList(s);
     for rs = 1:length(runSet{S})
         if isempty(runSet{S}{rs}.fList); continue; end
-
-        %!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        %!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        if ~ismember(runSet{S}{rs}.initFiles.fGeom,runSet{S}{rs}.initFiles.fList)
-            forceThis = 1;
-        else
-            forceThis = 0;
-        end
-        %!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        %!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        
-
-
         acqLabel = strsplit(runSet{S}{rs}.label,'_'); acqLabel = replace(acqLabel(contains(acqLabel,'acq-')),'acq-','');
         if strcmp(acqLabel,'bold')
             param.spSmFac  = []; % smoothing parameter (multiple of voxel size)
@@ -1072,20 +1057,6 @@ for s = 1:length(subList(sesIndList))
     for rs = 1:length(runSet{S})
         if isempty(runSet{S}{rs}.fList); continue; end
         acqLabel = strsplit(runSet{S}{rs}.label,'_'); acqLabel = char(replace(acqLabel(contains(acqLabel,'acq-')),'acq-',''));
-        
-
-
-        %!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        %!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        if ~ismember(runSet{S}{rs}.initFiles.fGeom,runSet{S}{rs}.initFiles.fList)
-            forceThis = 1;
-        else
-            forceThis = 0;
-        end
-        %!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        %!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        
-
 
         %%% Set smoothing parameter
         switch acqLabel
@@ -1143,18 +1114,6 @@ for s = 1:length(subList(sesIndList))
     S = sesIndList(s);
     for rs = 1:length(runSet{S})
         if isempty(runSet{S}{rs}.fList); continue; end
-
-
-        %!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        %!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        if ~ismember(runSet{S}{rs}.initFiles.fGeom,runSet{S}{rs}.initFiles.fList)
-            forceThis = 1;
-        else
-            forceThis = 0;
-        end
-        %!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        %!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        
         initFiles    = runSet{S}{rs}.initFiles;
         preprocFiles = cat(3,{runSet{S}{rs}.wrMocoFiles},{runSet{S}{rs}.brMocoFiles});
         runSet{S}{rs}.finalFiles = finalizePreproc6(initFiles,preprocFiles,forceThis,verboseThis);
@@ -1164,7 +1123,7 @@ end
 
 
 
-forceThis   = 1;
+forceThis   = 0;
 verboseThis = 0;
 %%%%%%%%%%%%%
 %% QA preproc
@@ -1185,12 +1144,18 @@ QA.subList = subListU;
 
 save tmpQA QA
 return
+%% 
 close all
 % clear all
 forceThis = 1;
 load tmpQA
 
 
+S=2
+A=1
+hFig = open(QA.fig{S}{A}.fAfter)
+R = 2
+hFig.UserData.fileNames{R}
 
 for S = 3%1:length(QA.fig)
     for A = 2%1:length(QA.fig{S})
