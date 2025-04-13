@@ -55,6 +55,9 @@ switch envId
         %%%% freesurfer
         src.fs   = 'ml freesurfer/8.0.0';
         system([src.fs   '; mri_convert > /dev/null'],'-echo');
+        %%%% ants
+        src.ants = 'ml ants/2.5.3';
+        system([src.ants '; N4BiasFieldCorrection > /dev/null'],'-echo');
         %%%% fsl for fslview once we figure out how to make it work
     otherwise
         dbstack; error('not implemented')
@@ -74,7 +77,6 @@ info.workFile     = fullfile(info.workDir,[info.dataSetLabel '_' replace(workScr
 info.indexFile    = fullfile(info.workDir,[info.dataSetLabel '_indexFile.mat']);
 %% %%%%%%%%%%%%%%%%%%
 
-return
 
 if force || ~exist(info.workFile,'file')
 
@@ -1131,6 +1133,34 @@ verboseThis = 0;
 disp('%%%%%%%%%%%%%')
 disp('%% QA preproc')
 disp('%%%%%%%%%%%%%')
+
+save tmp
+return
+
+
+
+S=4;
+A=1;
+R=2;
+for S = 1:length(runSet)
+    for A = 1:length(runSet{S})
+        for R = 1:length(runSet{S}{A}.finalFiles.fPreprocList)
+            
+            QAspike(runSet{S}{A}.finalFiles.fPreprocList{R,1},runSet{S}{A}.fMasks.fMask)
+            QAspike(runSet{S}{A}.finalFiles.fPreprocSmr.runAv.fList{R,1},runSet{S}{A}.fMasks.fMask)
+            
+
+        end
+    end
+end
+runSet
+QAspike
+
+
+
+
+
+
 [acqSet,subListU,QA] = runSet_combSes(runSet,subList,sesList);
 for S = 1:length(QA.fOrigList)
     for A = 1:length(QA.fOrigList{S})
@@ -1142,7 +1172,7 @@ end
 QA.subList = subListU;
 
 
-save tmpQA QA
+save tmpQA QA acqSet subListU
 return
 %% 
 close all
@@ -1157,8 +1187,22 @@ hFig = open(QA.fig{S}{A}.fAfter)
 R = 2
 hFig.UserData.fileNames{R}
 
-for S = 3%1:length(QA.fig)
-    for A = 2%1:length(QA.fig{S})
+for S = 2%1:length(QA.fig)
+    for A = 1%1:length(QA.fig{S})\
+        for R = 1:length(QA.fig{S}{A}.hAfter.UserData.fileNames)
+            f = QA.fig{S}{A}.hAfter.UserData.fileNames{R};
+            if ~exist(f,'file'); continue; end
+            [~,b] = fileparts(f);
+            if ~contains(b,'_dendo'); continue; end
+            hFig = open(f);
+            hFig.UserData.fileNames{R}
+        end
+    end
+end
+
+
+for S = 2%1:length(QA.fig)
+    for A = 1%1:length(QA.fig{S})
         fig = QA.fig{S}{A};
         QA.dendoFig{S,1}{1,A}.fAfter = replace(fig.fAfter,'.fig','_dendo.fig');
         if contains(fig.fAfter,'acq-bold'); continue; end
