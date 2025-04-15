@@ -1000,12 +1000,18 @@ for s = 1:length(subList(sesIndList))
         if isempty(runSet{S}{rs}.fList); continue; end
         acqLabel = strsplit(runSet{S}{rs}.label,'_'); acqLabel = replace(acqLabel(contains(acqLabel,'acq-')),'acq-','');
 
+
+
+        %%% FORCE
         if strcmp(runSet{S}{rs}.sub, 'vsmDiamCenSurP10') && strcmp(runSet{S}{rs}.ses, '1') && strcmp(runSet{S}{rs}.label,'acq-vfMRIpc_prsc-dflt')
-            param.baseInd = [0 0 0 0 1]';
+            forceThis = 1;
         else
-            param.baseInd = [];
+            forceThis = 0;
         end
 
+
+
+        %%% Set base image, mask and smoothing parameter
         if strcmp(acqLabel,'bold')
             param.spSmFac  = []; % smoothing parameter (multiple of voxel size)
         else
@@ -1013,12 +1019,17 @@ for s = 1:length(subList(sesIndList))
         end
         fBase = [];
         fMask = runSet{S}{rs}.fMasks.fMaskInv;
-        % try
-            runSet{S}{rs}.wrMocoFiles = estimMotionWR2(runSet{S}{rs}.initFiles,param,fBase,fMask,forceThis,verboseThis);
-        % catch
-        %     tmp = fullfile(workDir,['S-' num2str(S) '_RS-' num2str(S)]);
-        %     save(fullfile(tmp,'motion_correction_error.mat'));
-        % end
+
+        %%% Special case
+        if strcmp(runSet{S}{rs}.sub, 'vsmDiamCenSurP10') && strcmp(runSet{S}{rs}.ses, '1') && strcmp(runSet{S}{rs}.label,'acq-vfMRIpc_prsc-dflt')
+            param.baseInd = [0 0 0 0 1]';
+        else
+            param.baseInd = [];
+        end
+
+        %%% Compute
+        runSet{S}{rs}.wrMocoFiles = estimMotionWR2(runSet{S}{rs}.initFiles,param,fBase,fMask,forceThis,verboseThis);
+        
 
         % % % % % % compute all costs
         % % % % % r = 1;
@@ -1067,6 +1078,17 @@ for s = 1:length(subList(sesIndList))
     for rs = 1:length(runSet{S})
         if isempty(runSet{S}{rs}.fList); continue; end
         acqLabel = strsplit(runSet{S}{rs}.label,'_'); acqLabel = char(replace(acqLabel(contains(acqLabel,'acq-')),'acq-',''));
+        
+        
+        
+        %%% FORCE
+        if strcmp(runSet{S}{rs}.sub, 'vsmDiamCenSurP10') && strcmp(runSet{S}{rs}.ses, '1') && strcmp(runSet{S}{rs}.label,'acq-vfMRIpc_prsc-dflt')
+            forceThis = 1;
+        else
+            forceThis = 0;
+        end
+
+
 
         %%% Set smoothing parameter
         switch acqLabel
@@ -1124,6 +1146,16 @@ for s = 1:length(subList(sesIndList))
     S = sesIndList(s);
     for rs = 1:length(runSet{S})
         if isempty(runSet{S}{rs}.fList); continue; end
+
+
+        %%% FORCE
+        if strcmp(runSet{S}{rs}.sub, 'vsmDiamCenSurP10') && strcmp(runSet{S}{rs}.ses, '1') && strcmp(runSet{S}{rs}.label,'acq-vfMRIpc_prsc-dflt')
+            forceThis = 1;
+        else
+            forceThis = 0;
+        end
+
+        
         initFiles    = runSet{S}{rs}.initFiles;
         preprocFiles = cat(3,{runSet{S}{rs}.wrMocoFiles},{runSet{S}{rs}.brMocoFiles});
         runSet{S}{rs}.finalFiles = finalizePreproc6(initFiles,preprocFiles,forceThis,verboseThis);
@@ -1131,6 +1163,9 @@ for s = 1:length(subList(sesIndList))
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+
+
+return
 
 
 forceThis   = 0;
