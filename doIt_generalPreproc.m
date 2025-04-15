@@ -1001,10 +1001,9 @@ for s = 1:length(subList(sesIndList))
         acqLabel = strsplit(runSet{S}{rs}.label,'_'); acqLabel = replace(acqLabel(contains(acqLabel,'acq-')),'acq-','');
 
         if strcmp(runSet{S}{rs}.sub, 'vsmDiamCenSurP10') && strcmp(runSet{S}{rs}.ses, '1') && strcmp(runSet{S}{rs}.label,'acq-vfMRIpc_prsc-dflt')
-            forceThis = 1;
-            keyboard 
+            param.baseInd = [0 0 0 0 1]';
         else
-            forceThis = 0;
+            param.baseInd = [];
         end
 
         if strcmp(acqLabel,'bold')
