@@ -78,6 +78,7 @@ info.indexFile    = fullfile(info.workDir,[info.dataSetLabel '_indexFile.mat']);
 %% %%%%%%%%%%%%%%%%%%
 
 
+
 if force || ~exist(info.workFile,'file')
 
 
@@ -998,6 +999,14 @@ for s = 1:length(subList(sesIndList))
     for rs = 1:length(runSet{S})
         if isempty(runSet{S}{rs}.fList); continue; end
         acqLabel = strsplit(runSet{S}{rs}.label,'_'); acqLabel = replace(acqLabel(contains(acqLabel,'acq-')),'acq-','');
+
+        if strcmp(runSet{S}{rs}.sub, 'vsmDiamCenSurP10') && strcmp(runSet{S}{rs}.ses, '1') && strcmp(runSet{S}{rs}.label,'acq-vfMRIpc_prsc-dflt')
+            forceThis = 1;
+            keyboard 
+        else
+            forceThis = 0;
+        end
+
         if strcmp(acqLabel,'bold')
             param.spSmFac  = []; % smoothing parameter (multiple of voxel size)
         else
@@ -1005,12 +1014,12 @@ for s = 1:length(subList(sesIndList))
         end
         fBase = [];
         fMask = runSet{S}{rs}.fMasks.fMaskInv;
-        try
+        % try
             runSet{S}{rs}.wrMocoFiles = estimMotionWR2(runSet{S}{rs}.initFiles,param,fBase,fMask,forceThis,verboseThis);
-        catch
-            tmp = fullfile(workDir,['S-' num2str(S) '_RS-' num2str(S)]);
-            save(fullfile(tmp,'motion_correction_error.mat'));
-        end
+        % catch
+        %     tmp = fullfile(workDir,['S-' num2str(S) '_RS-' num2str(S)]);
+        %     save(fullfile(tmp,'motion_correction_error.mat'));
+        % end
 
         % % % % % % compute all costs
         % % % % % r = 1;
@@ -1136,20 +1145,30 @@ disp('%%%%%%%%%%%%%')
 
 save tmp
 return
+close all
+load tmp
+src.ants = 'ml ants/2.5.3';
 
-
-
-S=4;
-A=1;
-R=2;
+S=7;  A=2; R=1; % movement spike example
+S=11; A=1; R=1; % coil spike example
+runSet{S}{A}.finalFiles.fPreprocList(:,1)
 for S = 1:length(runSet)
     for A = 1:length(runSet{S})
         for R = 1:length(runSet{S}{A}.finalFiles.fPreprocList)
-            
-            QAspike(runSet{S}{A}.finalFiles.fPreprocList{R,1},runSet{S}{A}.fMasks.fMask)
-            QAspike(runSet{S}{A}.finalFiles.fPreprocSmr.runAv.fList{R,1},runSet{S}{A}.fMasks.fMask)
-            
 
+
+            fNonVesselMask = QAspike(runSet{S}{A}.finalFiles.fPreprocList{R,1},runSet{S}{A}.fMasks.fMask,1);
+            
+            mriMask = MRIread(fNonVesselMask);
+            spkns = MRIread(runSet{S}{A}.finalFiles.fPreprocList{R,1});
+            spkns = permute(spkns.vol,[4 1 2 3]);
+            spknsAlt = mean(spkns(:,:),2);
+            spkns    = mean(spkns(:,logical(mriMask.vol)),2);
+            figure('WindowStyle','docked');
+            plot(spkns);
+            hold on; yyaxis right
+            plot(spknsAlt);
+            
         end
     end
 end
@@ -1165,8 +1184,10 @@ QAspike
 for S = 1:length(QA.fOrigList)
     for A = 1:length(QA.fOrigList{S})
         outDir = fullfile(info.prcDir,'bids','derivatives',['sub-' subListU{S}],'ses-cat',acqSet{S}{A}(1).label);
-        [QA.fig{S,1}{A}.fBefore,QA.fig{S,1}{A}.hBefore] = xCorrQA(QA.fOrigList{S}{A}   ,QA.fMaskList{S}{A},QA.nDummy{S}{A},'beforePreproc',outDir,forceThis,verboseThis);
+        % [QA.fig{S,1}{A}.fBefore,QA.fig{S,1}{A}.hBefore] = xCorrQA(QA.fOrigList{S}{A}   ,QA.fMaskList{S}{A},QA.nDummy{S}{A},'beforePreproc',outDir,forceThis,verboseThis);
         [QA.fig{S,1}{A}.fAfter ,QA.fig{S,1}{A}.hAfter ] = xCorrQA(QA.fPreprocList{S}{A},QA.fMaskList{S}{A},QA.nDummy{S}{A},'afterPreproc' ,outDir,forceThis,verboseThis);
+        disp(char(QA.fPreprocList{S}{A}(:,1)))
+        keyboard
     end
 end
 QA.subList = subListU;
