@@ -1002,14 +1002,6 @@ for s = 1:length(subList(sesIndList))
 
 
 
-        %%% FORCE
-        if strcmp(runSet{S}{rs}.sub, 'vsmDiamCenSurP10') && strcmp(runSet{S}{rs}.ses, '1') && strcmp(runSet{S}{rs}.label,'acq-vfMRIpc_prsc-dflt')
-            forceThis = 1;
-        else
-            forceThis = 0;
-        end
-
-
 
         %%% Set base image, mask and smoothing parameter
         if strcmp(acqLabel,'bold')
@@ -1078,17 +1070,7 @@ for s = 1:length(subList(sesIndList))
     for rs = 1:length(runSet{S})
         if isempty(runSet{S}{rs}.fList); continue; end
         acqLabel = strsplit(runSet{S}{rs}.label,'_'); acqLabel = char(replace(acqLabel(contains(acqLabel,'acq-')),'acq-',''));
-        
-        
-        
-        %%% FORCE
-        if strcmp(runSet{S}{rs}.sub, 'vsmDiamCenSurP10') && strcmp(runSet{S}{rs}.ses, '1') && strcmp(runSet{S}{rs}.label,'acq-vfMRIpc_prsc-dflt')
-            forceThis = 1;
-        else
-            forceThis = 0;
-        end
-
-
+      
 
         %%% Set smoothing parameter
         switch acqLabel
@@ -1146,15 +1128,6 @@ for s = 1:length(subList(sesIndList))
     S = sesIndList(s);
     for rs = 1:length(runSet{S})
         if isempty(runSet{S}{rs}.fList); continue; end
-
-
-        %%% FORCE
-        if strcmp(runSet{S}{rs}.sub, 'vsmDiamCenSurP10') && strcmp(runSet{S}{rs}.ses, '1') && strcmp(runSet{S}{rs}.label,'acq-vfMRIpc_prsc-dflt')
-            forceThis = 1;
-        else
-            forceThis = 0;
-        end
-
         
         initFiles    = runSet{S}{rs}.initFiles;
         preprocFiles = cat(3,{runSet{S}{rs}.wrMocoFiles},{runSet{S}{rs}.brMocoFiles});
