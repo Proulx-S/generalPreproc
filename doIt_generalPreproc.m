@@ -1142,13 +1142,23 @@ return
 
 
 forceThis   = 0;
-verboseThis = 0;
+verboseThis = 1;
 %%%%%%%%%%%%%
 %% QA preproc
 %%%%%%%%%%%%%
 disp('%%%%%%%%%%%%%')
 disp('%% QA preproc')
 disp('%%%%%%%%%%%%%')
+
+for S = 1:length(runSet)
+    for A = 1:length(runSet{S})
+        QArun(runSet{S}{A}.finalFiles,runSet{S}{A}.fMasks.fMask,runSet{S}{A}.dbDirBidsDeriv,forceThis,verboseThis);
+    end
+end
+
+
+
+
 
 save tmp
 return
