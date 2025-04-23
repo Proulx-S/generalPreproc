@@ -139,6 +139,8 @@ switch info.dataSetLabel
             for ses = 1:length(sesDbListTmp{sub})
                 if isempty(sesDbListTmp{sub}{ses}); continue; end
 
+                % if sub==1 && ses==4; keyboard; end
+
                 if ~exist('subList','var');         subList = {}; end
                 subList{end+1,1}                            = [info.dataSetLabel 'P' num2str(sub)];
                 if ~exist('sesList','var');         sesList = {}; end
@@ -189,6 +191,7 @@ switch info.dataSetLabel
                 if ~exist('tof','var'); tof = {}; end
                 tof{end+1,1}.fList = dir(fullfile(dirs{end,1}.bids,'anat','*acq-tof*.nii.gz'));
 
+                
 
                 %%% fmap
                 disp('--fmap--')
@@ -217,6 +220,171 @@ switch info.dataSetLabel
                 % (5*0.840)/1.997802
                 % 1.997802*5
                 % 1.699028*5
+
+                %%%%% eyeOpenRest -- inflow
+                rCond{end,1}{1,end+1} = runCond;
+                rCond{end,1}{1,end}.dirs     = dirs{end,1};
+                rCond{end,1}{1,end}.dirsOrig = dirsOrig{end,1};
+                rCond{end,1}{1,end}.sub      = subList{end};
+                rCond{end,1}{1,end}.ses      = sesList{end};
+                rCond{end,1}{1,end}.acq      = 'vfMRI';
+                rCond{end,1}{1,end}.prsc     = 'dflt';
+                rCond{end,1}{1,end}.task     = 'eyeOpenRest';
+                dsgn = runDsgn;
+                rCond{end,1}{1,end}.dsgn  = dsgn;
+                fListTask = dir(fullfile(dirs{end,1}.bids,'func',['*_task-' rCond{end,1}{1,end}.task     '_*.nii.gz']));
+                    fListAcq  = dir(fullfile(dirs{end,1}.bids,'func',['*_acq-'  rCond{end,1}{1,end}.acq '*_angio.nii.gz']));
+                    fList     = intersect(fullfile({fListAcq.folder },{fListAcq.name })',fullfile({fListTask.folder},{fListTask.name})');
+                rCond{end,1}{1,end}.fList = {};
+                if ~isempty(fList)
+                    rCond{end,1}{1,end}.fList = fList;
+                    tr = JSNread(fList,{'RepetitionTime' 'RepetitionTimeExcitation'});
+                    rCond{end,1}{1,end}.tr    = cat(1,tr{:,1}); %sec
+                    rCond{end,1}{1,end}.trExc = cat(1,tr{:,2}); %sec
+                    nShot = round(rCond{end,1}{1,end}.tr ./ rCond{end,1}{1,end}.trExc);
+                    rCond{end,1}{1,end}.trExc = rCond{end,1}{1,end}.tr ./ nShot;
+                    rCond{end,1}{1,end}.nDummy = ceil(3./(rCond{end,1}{1,end}.trExc)./nShot);
+                end
+                rCond{end,1}{1,end}.date  = repmat(acqDate,size(rCond{end,1}{1,end}.fList));
+
+                %%%%% fixOnly -- inflow
+                rCond{end,1}{1,end+1} = runCond;
+                rCond{end,1}{1,end}.dirs     = dirs{end,1};
+                rCond{end,1}{1,end}.dirsOrig = dirsOrig{end,1};
+                rCond{end,1}{1,end}.sub      = subList{end};
+                rCond{end,1}{1,end}.ses      = sesList{end};
+                rCond{end,1}{1,end}.acq      = 'vfMRI';
+                rCond{end,1}{1,end}.prsc     = 'dflt';
+                rCond{end,1}{1,end}.task     = 'fixOnly';
+                dsgn = runDsgn;
+                rCond{end,1}{1,end}.dsgn  = dsgn;
+                fListTask = dir(fullfile(dirs{end,1}.bids,'func',['*_task-' rCond{end,1}{1,end}.task     '_*.nii.gz']));
+                fListAcq  = dir(fullfile(dirs{end,1}.bids,'func',['*_acq-'  rCond{end,1}{1,end}.acq '*_angio.nii.gz']));
+                fList     = intersect(fullfile({fListAcq.folder },{fListAcq.name })',fullfile({fListTask.folder},{fListTask.name})');
+                fList(contains(fList,{'desc-bck' 'desc-frnt'})) = [];
+                rCond{end,1}{1,end}.fList = {};
+                if ~isempty(fList)
+                    rCond{end,1}{1,end}.fList = fList;
+                    tr = JSNread(fList,{'RepetitionTime' 'RepetitionTimeExcitation'});
+                    rCond{end,1}{1,end}.tr    = cat(1,tr{:,1}); %sec
+                    rCond{end,1}{1,end}.trExc = cat(1,tr{:,2}); %sec
+                    nShot = round(rCond{end,1}{1,end}.tr ./ rCond{end,1}{1,end}.trExc);
+                    rCond{end,1}{1,end}.trExc = rCond{end,1}{1,end}.tr ./ nShot;
+                    rCond{end,1}{1,end}.nDummy = ceil(3./(rCond{end,1}{1,end}.trExc)./nShot);
+                end
+                rCond{end,1}{1,end}.date  = repmat(acqDate,size(rCond{end,1}{1,end}.fList));
+
+                %%%%% fixOnly -- inflow --- prscr-bck7
+                rCond{end,1}{1,end+1} = runCond;
+                rCond{end,1}{1,end}.dirs     = dirs{end,1};
+                rCond{end,1}{1,end}.dirsOrig = dirsOrig{end,1};
+                rCond{end,1}{1,end}.sub      = subList{end};
+                rCond{end,1}{1,end}.ses      = sesList{end};
+                rCond{end,1}{1,end}.acq      = 'vfMRI';
+                rCond{end,1}{1,end}.prsc     = 'bck7';
+                rCond{end,1}{1,end}.task     = 'fixOnly';
+                dsgn = runDsgn;
+                rCond{end,1}{1,end}.dsgn  = dsgn;
+                fListTask = dir(fullfile(dirs{end,1}.bids,'func',['*_task-' rCond{end,1}{1,end}.task     '_*.nii.gz'     ]));
+                fListAcq  = dir(fullfile(dirs{end,1}.bids,'func',['*_acq-'  rCond{end,1}{1,end}.acq      '*_angio.nii.gz']));
+                fListPrsc = dir(fullfile(dirs{end,1}.bids,'func',['*_desc-' rCond{end,1}{1,end}.prsc     '_*.nii.gz'     ]));
+                fList     = intersect(fullfile({fListAcq.folder },{fListAcq.name })',fullfile({fListTask.folder},{fListTask.name})');
+                fList     = intersect(fList                                         ,fullfile({fListPrsc.folder},{fListPrsc.name})');
+                rCond{end,1}{1,end}.fList = {};
+                if ~isempty(fList)
+                    rCond{end,1}{1,end}.fList = fList;
+                    tr = JSNread(fList,{'RepetitionTime' 'RepetitionTimeExcitation'});
+                    rCond{end,1}{1,end}.tr    = cat(1,tr{:,1}); %sec
+                    rCond{end,1}{1,end}.trExc = cat(1,tr{:,2}); %sec
+                    nShot = round(rCond{end,1}{1,end}.tr ./ rCond{end,1}{1,end}.trExc);
+                    rCond{end,1}{1,end}.trExc = rCond{end,1}{1,end}.tr ./ nShot;
+                    rCond{end,1}{1,end}.nDummy = ceil(3./(rCond{end,1}{1,end}.trExc)./nShot);
+                end
+                rCond{end,1}{1,end}.date  = repmat(acqDate,size(rCond{end,1}{1,end}.fList));
+
+                %%%%% fixOnly -- pc
+                rCond{end,1}{1,end+1} = runCond;
+                rCond{end,1}{1,end}.dirs     = dirs{end,1};
+                rCond{end,1}{1,end}.dirsOrig = dirsOrig{end,1};
+                rCond{end,1}{1,end}.sub      = subList{end};
+                rCond{end,1}{1,end}.ses      = sesList{end};
+                rCond{end,1}{1,end}.acq      = 'vfMRIpc';
+                rCond{end,1}{1,end}.prsc     = 'dflt';
+                rCond{end,1}{1,end}.task     = 'fixOnly';
+                dsgn = runDsgn;
+                rCond{end,1}{1,end}.dsgn  = dsgn;
+                fListAcq        = {};
+                fListAcq{end+1} = dir(fullfile(dirs{end,1}.bids,'func',['*_acq-pcVenc7z*_angio.nii.gz'])); fListAcq{end} = fullfile({fListAcq{end}.folder },{fListAcq{end}.name })';
+                fListAcq{end+1} = dir(fullfile(dirs{end,1}.bids,'func',['*_acq-pcVenc7ap*_angio.nii.gz'])); fListAcq{end} = fullfile({fListAcq{end}.folder },{fListAcq{end}.name })';
+                fListAcq        = unique(cat(1,fListAcq{:}));
+                fListRec  = dir(fullfile(dirs{end,1}.bids,'func',['*_rec-venc0_*_angio.nii.gz']));
+                fListTask = dir(fullfile(dirs{end,1}.bids,'func',['*_task-' rCond{end,1}{1,end}.task     '_*.nii.gz']));
+                fList     = intersect(fListAcq,fullfile({fListRec.folder },{fListRec.name })');
+                fList     = intersect(fList,fullfile({fListTask.folder},{fListTask.name})');
+                rCond{end,1}{1,end}.fList = {};
+                if ~isempty(fList)
+                    fListDiffMag   = replace(fList       ,'rec-venc0_','rec-venc*_');
+                    fListDiffPhase = replace(fListDiffMag,'part-mag'  ,'part-phase');
+                    for v = 1:size(fList,1)
+                        fListDiffMag{v,1} = dir(fListDiffMag{v,1});
+                        fListDiffMag{v,1} = fullfile({fListDiffMag{v,1}.folder},{fListDiffMag{v,1}.name})';
+                        fListDiffMag(v,:) = fListDiffMag{v,1}(~ismember(fListDiffMag{v,1},fList))';
+
+                        fListDiffPhase{v,1} = dir(fListDiffPhase{v,1});
+                        fListDiffPhase{v,1} = fullfile({fListDiffPhase{v,1}.folder},{fListDiffPhase{v,1}.name})';
+                        fListDiffPhase(v,:) = fListDiffPhase{v,1}(~ismember(fListDiffPhase{v,1},fList))';
+                    end
+                    rCond{end,1}{1,end}.fList = cat(2,fList,fListDiffMag,fListDiffPhase);
+                    tr = JSNread(fList,{'RepetitionTime' 'RepetitionTimeExcitation'});
+                    rCond{end,1}{1,end}.tr    = cat(1,tr{:,1}); %sec
+                    rCond{end,1}{1,end}.trExc = cat(1,tr{:,2}); %sec
+                    nShot = round(rCond{end,1}{1,end}.tr ./ rCond{end,1}{1,end}.trExc);
+                    rCond{end,1}{1,end}.trExc = rCond{end,1}{1,end}.tr ./ nShot;
+                    rCond{end,1}{1,end}.nDummy = ceil(3./(rCond{end,1}{1,end}.trExc)./nShot);
+                end
+                rCond{end,1}{1,end}.date  = repmat(acqDate,size(rCond{end,1}{1,end}.fList,1),1);
+
+                %%%%% fixOnly -- pc (highVenc)
+                rCond{end,1}{1,end+1} = runCond;
+                rCond{end,1}{1,end}.dirs     = dirs{end,1};
+                rCond{end,1}{1,end}.dirsOrig = dirsOrig{end,1};
+                rCond{end,1}{1,end}.sub  = subList{end};
+                rCond{end,1}{1,end}.ses  = sesList{end};
+                rCond{end,1}{1,end}.acq  = 'vfMRIpc';
+                rCond{end,1}{1,end}.prsc = 'dflt';
+                rCond{end,1}{1,end}.task = 'fixOnly';
+                dsgn = runDsgn;
+                rCond{end,1}{1,end}.dsgn  = dsgn;
+                fListAcq        = {};
+                fListAcq{end+1} = dir(fullfile(dirs{end,1}.bids,'func',['*_acq-pcVenc14z*_angio.nii.gz'])); fListAcq{end} = fullfile({fListAcq{end}.folder },{fListAcq{end}.name })';
+                fListAcq{end+1} = dir(fullfile(dirs{end,1}.bids,'func',['*_acq-pcVenc14ap*_angio.nii.gz'])); fListAcq{end} = fullfile({fListAcq{end}.folder },{fListAcq{end}.name })';
+                fListAcq        = unique(cat(1,fListAcq{:}));
+                fListRec  = dir(fullfile(dirs{end,1}.bids,'func',['*_rec-venc0_*_angio.nii.gz']));
+                fListTask = dir(fullfile(dirs{end,1}.bids,'func',['*_task-' rCond{end,1}{1,end}.task     '_*.nii.gz']));
+                fList     = intersect(fListAcq,fullfile({fListRec.folder },{fListRec.name })');
+                fList     = intersect(fList,fullfile({fListTask.folder},{fListTask.name})');
+                rCond{end,1}{1,end}.fList = {};
+                if ~isempty(fList)
+                    fListDiffMag   = replace(fList       ,'rec-venc0_','rec-venc*_');
+                    fListDiffPhase = replace(fListDiffMag,'part-mag'  ,'part-phase');
+                    for v = 1:size(fList,1)
+                        fListDiffMag{v,1} = dir(fListDiffMag{v,1});
+                        fListDiffMag{v,1} = fullfile({fListDiffMag{v,1}.folder},{fListDiffMag{v,1}.name})';
+                        fListDiffMag(v,:) = fListDiffMag{v,1}(~ismember(fListDiffMag{v,1},fList))';
+
+                        fListDiffPhase{v,1} = dir(fListDiffPhase{v,1});
+                        fListDiffPhase{v,1} = fullfile({fListDiffPhase{v,1}.folder},{fListDiffPhase{v,1}.name})';
+                        fListDiffPhase(v,:) = fListDiffPhase{v,1}(~ismember(fListDiffPhase{v,1},fList))';
+                    end
+                    rCond{end,1}{1,end}.fList = cat(2,fList,fListDiffMag,fListDiffPhase);
+                    tr = JSNread(fList,{'RepetitionTime' 'RepetitionTimeExcitation'});
+                    rCond{end,1}{1,end}.tr    = cat(1,tr{:,1}); %sec
+                    rCond{end,1}{1,end}.trExc = cat(1,tr{:,2}); %sec
+                    nShot = round(rCond{end,1}{1,end}.tr ./ rCond{end,1}{1,end}.trExc);
+                    rCond{end,1}{1,end}.trExc = rCond{end,1}{1,end}.tr ./ nShot;
+                    rCond{end,1}{1,end}.nDummy = ceil(3./(rCond{end,1}{1,end}.trExc)./nShot);
+                end
+                rCond{end,1}{1,end}.date  = repmat(acqDate,size(rCond{end,1}{1,end}.fList,1),1);
 
                 %%%%% 50sPrd5sDur -- inflow
                 rCond{end,1}{1,end+1} = runCond;
@@ -357,6 +525,119 @@ switch info.dataSetLabel
                     rCond{end,1}{1,end}.nDummy = ceil(3./(rCond{end,1}{1,end}.trExc)./nShot);
                 end
                 rCond{end,1}{1,end}.date  = repmat(acqDate,size(rCond{end,1}{1,end}.fList,1),1);
+
+                %%%%% 50sPrd1sDur -- inflow --- prsc-dflt
+                rCond{end,1}{1,end+1} = runCond;
+                rCond{end,1}{1,end}.dirs     = dirs{end,1};
+                rCond{end,1}{1,end}.dirsOrig = dirsOrig{end,1};
+                rCond{end,1}{1,end}.sub  = subList{end};
+                rCond{end,1}{1,end}.ses  = sesList{end};
+                rCond{end,1}{1,end}.acq  = 'vfMRI';
+                rCond{end,1}{1,end}.prsc = 'dflt';
+                rCond{end,1}{1,end}.task = '50sPrd1sDur';
+                dsgn = runDsgn;
+                dsgn.task = rCond{end,1}{1,end}.task;
+                dsgn.dt   = 0.840;
+                initRest   = dsgn.dt*12;
+                stimPeriod = dsgn.dt*57;
+                stimDur    = dsgn.dt*1;
+                runDur     = dsgn.dt*354;
+                dsgn.onsetList = initRest:stimPeriod:(runDur-stimPeriod);
+                dsgn.ondurList = ones(size(dsgn.onsetList)).*(stimDur);
+                dsgn.cond      = ones(size(dsgn.onsetList));
+                dsgn.condLabel = {'stim'};
+                rCond{end,1}{1,end}.dsgn  = dsgn;
+                fListAcq  = dir(fullfile(dirs{end,1}.bids,'func',['*_acq-'  rCond{end,1}{1,end}.acq '*_angio.nii.gz']));
+                fListTask = dir(fullfile(dirs{end,1}.bids,'func',['*_task-' rCond{end,1}{1,end}.task     '_*.nii.gz']));
+                fList     = intersect(fullfile({fListAcq.folder },{fListAcq.name })',fullfile({fListTask.folder},{fListTask.name})');
+                fList(contains(fList,{'desc-bck' 'desc-frnt'})) = [];
+                rCond{end,1}{1,end}.fList = {};
+                if ~isempty(fList)
+                    rCond{end,1}{1,end}.fList = fList;
+                    tr = JSNread(fList,{'RepetitionTime' 'RepetitionTimeExcitation'});
+                    rCond{end,1}{1,end}.tr    = cat(1,tr{:,1}); %sec
+                    rCond{end,1}{1,end}.trExc = cat(1,tr{:,2}); %sec
+                    nShot = round(rCond{end,1}{1,end}.tr ./ rCond{end,1}{1,end}.trExc);
+                    rCond{end,1}{1,end}.trExc = rCond{end,1}{1,end}.tr ./ nShot;
+                    rCond{end,1}{1,end}.nDummy = ceil(3./(rCond{end,1}{1,end}.trExc)./nShot);
+                end
+                rCond{end,1}{1,end}.date  = repmat(acqDate,size(rCond{end,1}{1,end}.fList));
+
+                %%%%% 50sPrd1sDur -- inflow --- prsc-bck7
+                rCond{end,1}{1,end+1} = runCond;
+                rCond{end,1}{1,end}.dirs     = dirs{end,1};
+                rCond{end,1}{1,end}.dirsOrig = dirsOrig{end,1};
+                rCond{end,1}{1,end}.sub  = subList{end};
+                rCond{end,1}{1,end}.ses  = sesList{end};
+                rCond{end,1}{1,end}.acq  = 'vfMRI';
+                rCond{end,1}{1,end}.prsc = 'bck7';
+                rCond{end,1}{1,end}.task = '50sPrd1sDur';
+                dsgn = runDsgn;
+                dsgn.task = rCond{end,1}{1,end}.task;
+                dsgn.dt   = 0.840;
+                initRest   = dsgn.dt*12;
+                stimPeriod = dsgn.dt*57;
+                stimDur    = dsgn.dt*1;
+                runDur     = dsgn.dt*354;
+                dsgn.onsetList = initRest:stimPeriod:(runDur-stimPeriod);
+                dsgn.ondurList = ones(size(dsgn.onsetList)).*(stimDur);
+                dsgn.cond      = ones(size(dsgn.onsetList));
+                dsgn.condLabel = {'stim'};
+                rCond{end,1}{1,end}.dsgn  = dsgn;
+                fListAcq  = dir(fullfile(dirs{end,1}.bids,'func',['*_acq-'  rCond{end,1}{1,end}.acq                        '*_angio.nii.gz']));
+                fListTask = dir(fullfile(dirs{end,1}.bids,'func',['*_task-' rCond{end,1}{1,end}.task                            '_*.nii.gz']));
+                fListPrsc = dir(fullfile(dirs{end,1}.bids,'func',['*_desc-' [regexprep(rCond{end,1}{1,end}.prsc,'\d+$','') '*'] '_*.nii.gz']));
+                fList     = intersect(fullfile({fListAcq.folder },{fListAcq.name })',fullfile({fListTask.folder},{fListTask.name})');
+                fList     = intersect(fList                                         ,fullfile({fListPrsc.folder},{fListPrsc.name})');
+                rCond{end,1}{1,end}.fList = {};
+                if ~isempty(fList)
+                    rCond{end,1}{1,end}.fList = fList;
+                    tr = JSNread(fList,{'RepetitionTime' 'RepetitionTimeExcitation'});
+                    rCond{end,1}{1,end}.tr    = cat(1,tr{:,1}); %sec
+                    rCond{end,1}{1,end}.trExc = cat(1,tr{:,2}); %sec
+                    nShot = round(rCond{end,1}{1,end}.tr ./ rCond{end,1}{1,end}.trExc);
+                    rCond{end,1}{1,end}.trExc = rCond{end,1}{1,end}.tr ./ nShot;
+                    rCond{end,1}{1,end}.nDummy = ceil(3./(rCond{end,1}{1,end}.trExc)./nShot);
+                end
+                rCond{end,1}{1,end}.date  = repmat(acqDate,size(rCond{end,1}{1,end}.fList));
+
+                %%%%% 50sPrd1sDur -- inflow --- prsc-frnt7
+                rCond{end,1}{1,end+1} = runCond;
+                rCond{end,1}{1,end}.dirs     = dirs{end,1};
+                rCond{end,1}{1,end}.dirsOrig = dirsOrig{end,1};
+                rCond{end,1}{1,end}.sub  = subList{end};
+                rCond{end,1}{1,end}.ses  = sesList{end};
+                rCond{end,1}{1,end}.acq  = 'vfMRI';
+                rCond{end,1}{1,end}.prsc = 'frnt7';
+                rCond{end,1}{1,end}.task = '50sPrd1sDur';
+                dsgn = runDsgn;
+                dsgn.task = rCond{end,1}{1,end}.task;
+                dsgn.dt   = 0.840;
+                initRest   = dsgn.dt*12;
+                stimPeriod = dsgn.dt*57;
+                stimDur    = dsgn.dt*1;
+                runDur     = dsgn.dt*354;
+                dsgn.onsetList = initRest:stimPeriod:(runDur-stimPeriod);
+                dsgn.ondurList = ones(size(dsgn.onsetList)).*(stimDur);
+                dsgn.cond      = ones(size(dsgn.onsetList));
+                dsgn.condLabel = {'stim'};
+                rCond{end,1}{1,end}.dsgn  = dsgn;
+                fListAcq  = dir(fullfile(dirs{end,1}.bids,'func',['*_acq-'  rCond{end,1}{1,end}.acq                        '*_angio.nii.gz']));
+                fListTask = dir(fullfile(dirs{end,1}.bids,'func',['*_task-' rCond{end,1}{1,end}.task                            '_*.nii.gz']));
+                fListPrsc = dir(fullfile(dirs{end,1}.bids,'func',['*_desc-' [regexprep(rCond{end,1}{1,end}.prsc,'\d+$','') '*'] '_*.nii.gz']));
+                fList     = intersect(fullfile({fListAcq.folder },{fListAcq.name })',fullfile({fListTask.folder},{fListTask.name})');
+                fList     = intersect(fList                                         ,fullfile({fListPrsc.folder},{fListPrsc.name})');
+                rCond{end,1}{1,end}.fList = {};
+                if ~isempty(fList)
+                    rCond{end,1}{1,end}.fList = fList;
+                    tr = JSNread(fList,{'RepetitionTime' 'RepetitionTimeExcitation'});
+                    rCond{end,1}{1,end}.tr    = cat(1,tr{:,1}); %sec
+                    rCond{end,1}{1,end}.trExc = cat(1,tr{:,2}); %sec
+                    nShot = round(rCond{end,1}{1,end}.tr ./ rCond{end,1}{1,end}.trExc);
+                    rCond{end,1}{1,end}.trExc = rCond{end,1}{1,end}.tr ./ nShot;
+                    rCond{end,1}{1,end}.nDummy = ceil(3./(rCond{end,1}{1,end}.trExc)./nShot);
+                end
+                rCond{end,1}{1,end}.date  = repmat(acqDate,size(rCond{end,1}{1,end}.fList));
 
                 %%%%% 50sPrd10sDur -- inflow
                 rCond{end,1}{1,end+1} = runCond;
@@ -600,6 +881,14 @@ switch info.dataSetLabel
                         phs{end,1} = extractLabChartData4(fullfile(phsFile.folder,phsFile.name),rCond{end},char(dirs{end,1}.phs),forceThis);
                     end
                 end
+
+
+
+
+                % %%% anat to rCond
+                % rCond
+                % avMap
+
                 
 
 
@@ -607,21 +896,23 @@ switch info.dataSetLabel
                 % ses
                 % keyboard
 
+                %%% Add
+
             end
         end
-        subList
-        sesList
-        s = 15;
-        tmp = [rCond{s}{:}];
-        tmp.acq
-        tmp.tr
-        tmp.trExc
-        pcMRA{s}.fList.name
-        memprage{s}
-        avMap{s}.fList.name
-        tof{s}.fList
-        b0{s}.fList.name
-        b1{s}.fList.name
+        % subList
+        % sesList
+        % s = 15;
+        % tmp = [rCond{s}{:}];
+        % tmp.acq
+        % tmp.tr
+        % tmp.trExc
+        % pcMRA{s}.fList.name
+        % memprage{s}
+        % avMap{s}.fList.name
+        % tof{s}.fList
+        % b0{s}.fList.name
+        % b1{s}.fList.name
 
 
         
@@ -697,22 +988,33 @@ for RS = 1:length(rCond)
     rCond{RS}(ind) = [];
 end
 
+%%% Add anat to rCond
+for RS = 1:length(rCond)
+    for c = 1:length(rCond{RS})
+        rCond{RS}{c}.volAnat.avMap      = avMap{RS}.fList;
+        rCond{RS}{c}.volAnat.pcMRA      = pcMRA{RS}.fList;
+        rCond{RS}{c}.volAnat.tof        = tof{RS}.fList;
+        rCond{RS}{c}.volAnat.memprage   = memprage{RS}.fList;
+    end
+end
+clear avMap pcMRA memprage tof
+
 %%% Remove empty sessions
 ind = cellfun('isempty',rCond);
 rCond(ind)      = [];
-avMap(ind)      = [];
+% avMap(ind)      = [];
 b0(ind)         = [];
 b1(ind)         = [];
 dirs(ind)       = [];
 dirsOrig(ind)   = [];
-memprage(ind)   = [];
-pcMRA(ind)      = [];
+% memprage(ind)   = [];
+% pcMRA(ind)      = [];
 phs(ind)        = [];
 prcDirList(ind) = [];
 sesDbList(ind)  = [];
 sesList(ind)    = [];
 subList(ind)    = [];
-tof(ind)        = [];
+% tof(ind)        = [];
 
 % %%% Combine different sessions in the same runCond ----- too complicated
 % rCond = [rCond{:}]';% rCond = [rCond{:}]';
@@ -756,7 +1058,7 @@ tof(ind)        = [];
 
 
 
-forceThis   = 0;
+forceThis   = 1;
 verboseThis = 0;
 %%%%%%%%%%%%%%%%%
 %% Initalize data
@@ -831,7 +1133,7 @@ for s = 1:length(subList(sesIndList))
 end
 %% %%%%%%%%%%%%%%
 
-
+return
 
 forceThis   = 0;
 verboseThis = 0;
@@ -1138,17 +1440,14 @@ end
 
 
 
-return
-
-
 forceThis   = 0;
-verboseThis = 1;
-%%%%%%%%%%%%%
-%% QA preproc
-%%%%%%%%%%%%%
-disp('%%%%%%%%%%%%%')
-disp('%% QA preproc')
-disp('%%%%%%%%%%%%%')
+verboseThis = 0;
+%%%%%%%%%%%%%%%%%%%%%%%%
+%% QA preproc run-by-run
+%%%%%%%%%%%%%%%%%%%%%%%%
+disp('%%%%%%%%%%%%%%%%%%%%%%%%')
+disp('%% QA preproc run-by-run')
+disp('%%%%%%%%%%%%%%%%%%%%%%%%')
 
 for S = 1:length(runSet)
     for A = 1:length(runSet{S})
@@ -1156,168 +1455,176 @@ for S = 1:length(runSet)
     end
 end
 
+% save tmp
+% return
+% close all
+% load tmp
+% src.ants = 'ml ants/2.5.3';
+% 
+% S=7;  A=2; R=1; % movement spike example
+% S=11; A=1; R=1; % coil spike example
+% runSet{S}{A}.finalFiles.fPreprocList(:,1)
+% for S = 1:length(runSet)
+%     for A = 1:length(runSet{S})
+%         for R = 1:length(runSet{S}{A}.finalFiles.fPreprocList)
+% 
+% 
+%             fNonVesselMask = QAspike(runSet{S}{A}.finalFiles.fPreprocList{R,1},runSet{S}{A}.fMasks.fMask,1);
+% 
+%             mriMask = MRIread(fNonVesselMask);
+%             spkns = MRIread(runSet{S}{A}.finalFiles.fPreprocList{R,1});
+%             spkns = permute(spkns.vol,[4 1 2 3]);
+%             spknsAlt = mean(spkns(:,:),2);
+%             spkns    = mean(spkns(:,logical(mriMask.vol)),2);
+%             figure('WindowStyle','docked');
+%             plot(spkns);
+%             hold on; yyaxis right
+%             plot(spknsAlt);
+% 
+%         end
+%     end
+% end
+% runSet
+% QAspike
+
+%% %%%%%%%%%%%%%%%%%%%%%
 
 
 
 
-save tmp
-return
-close all
-load tmp
-src.ants = 'ml ants/2.5.3';
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Combine sessions and cross-run QA
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+disp('%% Combine sessions and cross-run QA')
+disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
 
-S=7;  A=2; R=1; % movement spike example
-S=11; A=1; R=1; % coil spike example
-runSet{S}{A}.finalFiles.fPreprocList(:,1)
-for S = 1:length(runSet)
-    for A = 1:length(runSet{S})
-        for R = 1:length(runSet{S}{A}.finalFiles.fPreprocList)
-
-
-            fNonVesselMask = QAspike(runSet{S}{A}.finalFiles.fPreprocList{R,1},runSet{S}{A}.fMasks.fMask,1);
-            
-            mriMask = MRIread(fNonVesselMask);
-            spkns = MRIread(runSet{S}{A}.finalFiles.fPreprocList{R,1});
-            spkns = permute(spkns.vol,[4 1 2 3]);
-            spknsAlt = mean(spkns(:,:),2);
-            spkns    = mean(spkns(:,logical(mriMask.vol)),2);
-            figure('WindowStyle','docked');
-            plot(spkns);
-            hold on; yyaxis right
-            plot(spknsAlt);
-            
-        end
-    end
-end
-runSet
-QAspike
-
-
-
-
-
-
+%%% Combine sessions
 [acqSet,subListU,QA] = runSet_combSes(runSet,subList,sesList);
-for S = 1:length(QA.fOrigList)
-    for A = 1:length(QA.fOrigList{S})
-        outDir = fullfile(info.prcDir,'bids','derivatives',['sub-' subListU{S}],'ses-cat',acqSet{S}{A}(1).label);
-        % [QA.fig{S,1}{A}.fBefore,QA.fig{S,1}{A}.hBefore] = xCorrQA(QA.fOrigList{S}{A}   ,QA.fMaskList{S}{A},QA.nDummy{S}{A},'beforePreproc',outDir,forceThis,verboseThis);
-        [QA.fig{S,1}{A}.fAfter ,QA.fig{S,1}{A}.hAfter ] = xCorrQA(QA.fPreprocList{S}{A},QA.fMaskList{S}{A},QA.nDummy{S}{A},'afterPreproc' ,outDir,forceThis,verboseThis);
-        disp(char(QA.fPreprocList{S}{A}(:,1)))
-        keyboard
-    end
-end
-QA.subList = subListU;
+QA.subList = subListU; clear subListU
 
-
-save tmpQA QA acqSet subListU
-return
-%% 
-close all
-% clear all
-forceThis = 1;
-load tmpQA
-
-
-S=2
-A=1
-hFig = open(QA.fig{S}{A}.fAfter)
-R = 2
-hFig.UserData.fileNames{R}
-
-for S = 2%1:length(QA.fig)
-    for A = 1%1:length(QA.fig{S})\
-        for R = 1:length(QA.fig{S}{A}.hAfter.UserData.fileNames)
-            f = QA.fig{S}{A}.hAfter.UserData.fileNames{R};
-            if ~exist(f,'file'); continue; end
-            [~,b] = fileparts(f);
-            if ~contains(b,'_dendo'); continue; end
-            hFig = open(f);
-            hFig.UserData.fileNames{R}
-        end
-    end
-end
-
-
-for S = 2%1:length(QA.fig)
-    for A = 1%1:length(QA.fig{S})
-        fig = QA.fig{S}{A};
-        QA.dendoFig{S,1}{1,A}.fAfter = replace(fig.fAfter,'.fig','_dendo.fig');
-        if contains(fig.fAfter,'acq-bold'); continue; end
-        
-            
-        if forceThis || ~exist(QA.dendoFig{S,1}{1,A}.fAfter)
-            %%% Define clustering
-            [kI,k,hFig] = QAdendogram(fig.fAfter);
-            saveas(hFig,QA.dendoFig{S,1}{1,A}.fAfter);
-            close(hFig);
-        end
-    end
-end
-
-
-
-%% Censore bad timepoints
-%%% Plot QA correlation matrix
-fig = QA.fig{end}{2};
-fig.hAfter = open(fig.fAfter);
-fig.hAfter.UserData.fileNames
-tmp = strsplit(fig.hAfter.UserData.fileNames{1},'_'); tmp{contains(tmp,'run-')} = 'run-cat'; tmp = strjoin(tmp,'_')
-
-
-
-%%% Get correlation matrix
-ax = findobj(fig.hAfter.Children,'Type','Axes'    );
-cb = findobj(fig.hAfter.Children,'Type','ColorBar');
-im = findobj(ax,'Type','Image');
-rho = im.CData;
-
-%%% Explore clusters from QA correlation matrix
-Z = linkage(squareform(1-rho), 'average'); % Convert correlation to distance
-figure('WindowStyle','docked');
-[H, T, perm] = dendrogram(Z, 0, 'Reorder',1:length(rho),'ColorThreshold',0.2,'Orientation','right');
-ax = gca; ax.YDir = 'reverse';
-ax.YTick = [];
-
-k = 4;
-clusters_h = cluster(Z, 'maxclust', k); % Adjust number of clusters as needed
-
-
-
-%%% Plot all clusters
-% figure(fig.hAfter);
-yyaxis right
-plot(clusters_h,'k','LineWidth',2);
-ylim([0 k+1])
-ax.PlotBoxAspectRatio = [1 1 1];
-cb.Position(1) = cb.Position(1) + 0.05;
-
-%%% Plot largest cluster
-[a,b,c] = unique(clusters_h);
-cLarge = mode(c)==c;
-yyaxis left; hold on
-plot(cLarge.*size(rho,1).*0.05 + 1,'-m');
-
-cIn = false(size(rho,1),1);
-cIn = cIn|cLarge;
-cLarge = mode(c(~cIn))==c;
-plot(size(rho,1) - cLarge.*size(rho,1).*0.05,'-m');
-
-% %%% Choose clusters to keep
+%%% Cross-runs / cross-session QA
+% for S = 1:length(QA.fOrigList)
+%     for A = 1:length(QA.fOrigList{S})
+%         outDir = fullfile(info.prcDir,'bids','derivatives',['sub-' subListU{S}],'ses-cat',acqSet{S}{A}(1).label);
+%         % [QA.fig{S,1}{A}.fBefore,QA.fig{S,1}{A}.hBefore] = xCorrQA(QA.fOrigList{S}{A}   ,QA.fMaskList{S}{A},QA.nDummy{S}{A},'beforePreproc',outDir,forceThis,verboseThis);
+%         [QA.fig{S,1}{A}.fAfter ,QA.fig{S,1}{A}.hAfter ] = xCorrQA(QA.fPreprocList{S}{A},QA.fMaskList{S}{A},QA.nDummy{S}{A},'afterPreproc' ,outDir,forceThis,verboseThis);
+%         disp(char(QA.fPreprocList{S}{A}(:,1)))
+%         keyboard
+%     end
+% end
+% QA.subList = subListU;
+% 
+% 
+% save tmpQA QA acqSet subListU
+% return
+% 
+% %% 
+% close all
+% % clear all
+% forceThis = 1;
+% load tmpQA
+% 
+% 
+% S=2
+% A=1
+% hFig = open(QA.fig{S}{A}.fAfter)
+% R = 2
+% hFig.UserData.fileNames{R}
+% 
+% for S = 2%1:length(QA.fig)
+%     for A = 1%1:length(QA.fig{S})\
+%         for R = 1:length(QA.fig{S}{A}.hAfter.UserData.fileNames)
+%             f = QA.fig{S}{A}.hAfter.UserData.fileNames{R};
+%             if ~exist(f,'file'); continue; end
+%             [~,b] = fileparts(f);
+%             if ~contains(b,'_dendo'); continue; end
+%             hFig = open(f);
+%             hFig.UserData.fileNames{R}
+%         end
+%     end
+% end
+% 
+% 
+% for S = 2%1:length(QA.fig)
+%     for A = 1%1:length(QA.fig{S})
+%         fig = QA.fig{S}{A};
+%         QA.dendoFig{S,1}{1,A}.fAfter = replace(fig.fAfter,'.fig','_dendo.fig');
+%         if contains(fig.fAfter,'acq-bold'); continue; end
+% 
+% 
+%         if forceThis || ~exist(QA.dendoFig{S,1}{1,A}.fAfter)
+%             %%% Define clustering
+%             [kI,k,hFig] = QAdendogram(fig.fAfter);
+%             saveas(hFig,QA.dendoFig{S,1}{1,A}.fAfter);
+%             close(hFig);
+%         end
+%     end
+% end
+% 
+% 
+% 
+% %% Censore bad timepoints
+% %%% Plot QA correlation matrix
+% fig = QA.fig{end}{2};
+% fig.hAfter = open(fig.fAfter);
+% fig.hAfter.UserData.fileNames
+% tmp = strsplit(fig.hAfter.UserData.fileNames{1},'_'); tmp{contains(tmp,'run-')} = 'run-cat'; tmp = strjoin(tmp,'_')
+% 
+% 
+% 
+% %%% Get correlation matrix
+% ax = findobj(fig.hAfter.Children,'Type','Axes'    );
+% cb = findobj(fig.hAfter.Children,'Type','ColorBar');
+% im = findobj(ax,'Type','Image');
+% rho = im.CData;
+% 
+% %%% Explore clusters from QA correlation matrix
+% Z = linkage(squareform(1-rho), 'average'); % Convert correlation to distance
+% figure('WindowStyle','docked');
+% [H, T, perm] = dendrogram(Z, 0, 'Reorder',1:length(rho),'ColorThreshold',0.2,'Orientation','right');
+% ax = gca; ax.YDir = 'reverse';
+% ax.YTick = [];
+% 
+% k = 4;
+% clusters_h = cluster(Z, 'maxclust', k); % Adjust number of clusters as needed
+% 
+% 
+% 
+% %%% Plot all clusters
+% % figure(fig.hAfter);
+% yyaxis right
+% plot(clusters_h,'k','LineWidth',2);
+% ylim([0 k+1])
+% ax.PlotBoxAspectRatio = [1 1 1];
+% cb.Position(1) = cb.Position(1) + 0.05;
+% 
+% %%% Plot largest cluster
 % [a,b,c] = unique(clusters_h);
-% cKeep = mode(c)==c;
-% im.CData = rho;
-% im.CData(:,~cKeep) = nan;
+% cLarge = mode(c)==c;
+% yyaxis left; hold on
+% plot(cLarge.*size(rho,1).*0.05 + 1,'-m');
+% 
+% cIn = false(size(rho,1),1);
+% cIn = cIn|cLarge;
+% cLarge = mode(c(~cIn))==c;
+% plot(size(rho,1) - cLarge.*size(rho,1).*0.05,'-m');
+% 
+% % %%% Choose clusters to keep
+% % [a,b,c] = unique(clusters_h);
+% % cKeep = mode(c)==c;
+% % im.CData = rho;
+% % im.CData(:,~cKeep) = nan;
+% 
+% % cKeep = cKeep | mode(c(~cKeep))==c;
+% % im.CData = rho;
+% % im.CData(:,~cKeep) = nan;
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% cKeep = cKeep | mode(c(~cKeep))==c;
-% im.CData = rho;
-% im.CData(:,~cKeep) = nan;
-%% %%%%%%%%%%
 
 
-
-forceThis   = 0;
-verboseThis = 0;
+forceThis   = 1;
+verboseThis = 1;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Save proprocessing files
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1326,11 +1633,13 @@ disp('%% Save proprocessing files')
 disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%')
 
 if forceThis || ~exist(info.workFile,'file')
-    %%% Clear figure handles to reduce file size
-    for i = 1:length(QA.fig)
-        for ii = 1:length(QA.fig{i})
-            QA.fig{i}{ii}.hBefore = [];
-            QA.fig{i}{ii}.hAfter  = [];
+    if isfield(QA,'fig')
+        %%% Clear figure handles to reduce file size
+        for i = 1:length(QA.fig)
+            for ii = 1:length(QA.fig{i})
+                QA.fig{i}{ii}.hBefore = [];
+                QA.fig{i}{ii}.hAfter  = [];
+            end
         end
     end
 
@@ -1356,7 +1665,7 @@ end
 %% %%%%%%%%%%%%%%%%%%%%%%%%
 
 
-return
+
 
 
 else
@@ -1370,20 +1679,28 @@ else
 disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%')
 disp('%% Load proprocessing files')
 disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%')
-load(info.workFile,'rCond','runSet','subList','sesList','acqSet','QA','phs','volAnat');
+load(info.workFile,'rCond','runSet','subList','sesList','acqSet','QA','volAnat');
 %% %%%%%%%%%%%%%%%%%%%%%%%%
-
-
+% rCond{mriSessionX1}{1XrunGroup}        : only exact run repetitions are pooled together
+% runSet{mriSessionX1}{1XrunPreprocGroup}: runs to be preprocessed together are pooled together
+% subList and sesList                    : match rCond and runSet
+% acqSet{sub,runPreprocGroup}            : runs from different sessions from the same subject are pooled
+% QA                                     : to be fixed (matches acqSet)
+% subListU                               : matches QA
+% volAnat                                : to be fixed (matches acqSet)
 
 end
 
 
+return
+
 
 if force || ~exist(info.indexFile,'file')
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Refactor and save data index file
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Refactor (split acq and stim conditions) and save data index file
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
 disp('%% Refactor and save data index file')
 disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
@@ -1401,14 +1718,25 @@ phs = [];
 % The idea would be to then store the index file there two
 % and have both the index and data in the same place
 % for further analysis that do not require comming back to preprocessing.
+info.subList  = subList;
+info.acqList  = runCondAcqList';
+info.taskList = runCondStimList';
 try
-    save(info.indexFile,'rCond','QA','info');
+    save(info.indexFile,'rCond','info','QA');
 catch
-    save(info.indexFile,'rCond','QA','info','-v7.3');
+    save(info.indexFile,'rCond','info','QA','-v7.3');
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% rCond{subX1}.(acquisitionCondition).(taskCondition): runCond data format (see runCond.m)
+% QA.info{subX1}                                     : matches acqSet
+
 
 end
+
+
+
+
+
 
 
 
