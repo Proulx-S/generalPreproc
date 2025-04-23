@@ -1016,6 +1016,31 @@ sesList(ind)    = [];
 subList(ind)    = [];
 % tof(ind)        = [];
 
+%%% Further remove the few runs that were reconstructed with adaptive combine by mistake
+badList = {
+    'sub-vsmRingP1_ses-1_task-50sPrd1sDur_acq-vfMRIinflow_desc-bck_run-2_angio'
+    'sub-vsmRingP1_ses-1_task-50sPrd1sDur_acq-vfMRIinflow_desc-bck_run-3_angio'
+    'sub-vsmRingP1_ses-1_task-50sPrd1sDur_acq-vfMRIinflow_desc-frnt_run-2_angio'
+    'sub-vsmRingP1_ses-1_task-50sPrd1sDur_acq-vfMRIinflow_desc-frnt_run-3_angio'
+    };
+for r = 1:length(rCond)
+    for c = 1:length(rCond{r})
+        badInd = contains(rCond{r}{c}.fList(:,1),badList);
+        if any(badInd)
+            rCond{r}{c}.fList(badInd,:)  = [];
+            rCond{r}{c}.date(badInd,:)   = [];
+            rCond{r}{c}.tr(badInd,:)     = [];
+            rCond{r}{c}.trExc(badInd,:)  = [];
+            rCond{r}{c}.nDummy(badInd,:) = [];
+            rCond{r}{c}.bhvr(badInd,:)   = [];
+        end
+    end
+end
+
+
+
+
+
 % %%% Combine different sessions in the same runCond ----- too complicated
 % rCond = [rCond{:}]';% rCond = [rCond{:}]';
 % ind = false(size(rCond));
@@ -1058,7 +1083,7 @@ subList(ind)    = [];
 
 
 
-forceThis   = 1;
+forceThis   = 0;
 verboseThis = 0;
 %%%%%%%%%%%%%%%%%
 %% Initalize data
@@ -1133,13 +1158,13 @@ for s = 1:length(subList(sesIndList))
 end
 %% %%%%%%%%%%%%%%
 
-return
+
 
 forceThis   = 0;
 verboseThis = 0;
-%%%%%%%%%%%%%%%%%
-%% Draw all masks
-%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%
+%% Draw brain masks
+%%%%%%%%%%%%%%%%%%%
 disp('%%%%%%%%%%%%%%%%%')
 disp('%% Draw all masks')
 disp('%%%%%%%%%%%%%%%%%')
@@ -1282,12 +1307,11 @@ for s = 1:length(subList(sesIndList))
         end
     end
 end
-%% %%%%%%%%%%%%%%
+%% %%%%%%%%%%%%%%%%
 
 
 
-
-forceThis   = 0;
+forceThis   = 1;
 verboseThis = 0;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Within-run motion correction
@@ -1355,8 +1379,7 @@ end
 
 
 
-
-forceThis   = 0;
+forceThis   = 1;
 verboseThis = 0;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Between-run motion correction
@@ -1417,7 +1440,7 @@ end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-forceThis   = 0;
+forceThis   = 1;
 verboseThis = 0;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Finalize preprocessing (apply transformations in a single interpolation step)
@@ -1438,7 +1461,7 @@ for s = 1:length(subList(sesIndList))
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-
+return
 
 forceThis   = 0;
 verboseThis = 0;
