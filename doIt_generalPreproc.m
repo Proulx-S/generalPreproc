@@ -233,8 +233,10 @@ switch info.dataSetLabel
                 dsgn = runDsgn;
                 rCond{end,1}{1,end}.dsgn  = dsgn;
                 fListTask = dir(fullfile(dirs{end,1}.bids,'func',['*_task-' rCond{end,1}{1,end}.task     '_*.nii.gz']));
-                    fListAcq  = dir(fullfile(dirs{end,1}.bids,'func',['*_acq-'  rCond{end,1}{1,end}.acq '*_angio.nii.gz']));
-                    fList     = intersect(fullfile({fListAcq.folder },{fListAcq.name })',fullfile({fListTask.folder},{fListTask.name})');
+                fListAcq  = dir(fullfile(dirs{end,1}.bids,'func',['*_acq-'  rCond{end,1}{1,end}.acq '*_angio.nii.gz']));
+                fList     = intersect(fullfile({fListAcq.folder },{fListAcq.name })',fullfile({fListTask.folder},{fListTask.name})');
+                [~,b,~] = fileparts(fList); b = startsWith(b, 'N4_');
+                fList(b) = [];
                 rCond{end,1}{1,end}.fList = {};
                 if ~isempty(fList)
                     rCond{end,1}{1,end}.fList = fList;
@@ -262,6 +264,8 @@ switch info.dataSetLabel
                 fListAcq  = dir(fullfile(dirs{end,1}.bids,'func',['*_acq-'  rCond{end,1}{1,end}.acq '*_angio.nii.gz']));
                 fList     = intersect(fullfile({fListAcq.folder },{fListAcq.name })',fullfile({fListTask.folder},{fListTask.name})');
                 fList(contains(fList,{'desc-bck' 'desc-frnt'})) = [];
+                [~,b,~] = fileparts(fList); b = startsWith(b, 'N4_');
+                fList(b) = [];
                 rCond{end,1}{1,end}.fList = {};
                 if ~isempty(fList)
                     rCond{end,1}{1,end}.fList = fList;
@@ -290,6 +294,8 @@ switch info.dataSetLabel
                 fListPrsc = dir(fullfile(dirs{end,1}.bids,'func',['*_desc-' rCond{end,1}{1,end}.prsc     '_*.nii.gz'     ]));
                 fList     = intersect(fullfile({fListAcq.folder },{fListAcq.name })',fullfile({fListTask.folder},{fListTask.name})');
                 fList     = intersect(fList                                         ,fullfile({fListPrsc.folder},{fListPrsc.name})');
+                [~,b,~] = fileparts(fList); b = startsWith(b, 'N4_');
+                fList(b) = [];
                 rCond{end,1}{1,end}.fList = {};
                 if ~isempty(fList)
                     rCond{end,1}{1,end}.fList = fList;
@@ -321,6 +327,8 @@ switch info.dataSetLabel
                 fListTask = dir(fullfile(dirs{end,1}.bids,'func',['*_task-' rCond{end,1}{1,end}.task     '_*.nii.gz']));
                 fList     = intersect(fListAcq,fullfile({fListRec.folder },{fListRec.name })');
                 fList     = intersect(fList,fullfile({fListTask.folder},{fListTask.name})');
+                [~,b,~] = fileparts(fList); b = startsWith(b, 'N4_');
+                fList(b) = [];
                 rCond{end,1}{1,end}.fList = {};
                 if ~isempty(fList)
                     fListDiffMag   = replace(fList       ,'rec-venc0_','rec-venc*_');
@@ -363,6 +371,8 @@ switch info.dataSetLabel
                 fListTask = dir(fullfile(dirs{end,1}.bids,'func',['*_task-' rCond{end,1}{1,end}.task     '_*.nii.gz']));
                 fList     = intersect(fListAcq,fullfile({fListRec.folder },{fListRec.name })');
                 fList     = intersect(fList,fullfile({fListTask.folder},{fListTask.name})');
+                [~,b,~] = fileparts(fList); b = startsWith(b, 'N4_');
+                fList(b) = [];
                 rCond{end,1}{1,end}.fList = {};
                 if ~isempty(fList)
                     fListDiffMag   = replace(fList       ,'rec-venc0_','rec-venc*_');
@@ -410,6 +420,8 @@ switch info.dataSetLabel
                 fListTask = dir(fullfile(dirs{end,1}.bids,'func',['*_task-' rCond{end,1}{1,end}.task     '_*.nii.gz']));
                     fListAcq  = dir(fullfile(dirs{end,1}.bids,'func',['*_acq-'  rCond{end,1}{1,end}.acq '*_angio.nii.gz']));
                     fList     = intersect(fullfile({fListAcq.folder },{fListAcq.name })',fullfile({fListTask.folder},{fListTask.name})');
+                [~,b,~] = fileparts(fList); b = startsWith(b, 'N4_');
+                fList(b) = [];
                 rCond{end,1}{1,end}.fList = {};
                 if ~isempty(fList)
                     rCond{end,1}{1,end}.fList = fList;
@@ -451,6 +463,8 @@ switch info.dataSetLabel
                 fListTask = dir(fullfile(dirs{end,1}.bids,'func',['*_task-' rCond{end,1}{1,end}.task     '_*.nii.gz']));
                 fList     = intersect(fListAcq,fullfile({fListRec.folder },{fListRec.name })');
                 fList     = intersect(fList,fullfile({fListTask.folder},{fListTask.name})');
+                [~,b,~] = fileparts(fList); b = startsWith(b, 'N4_');
+                fList(b) = [];
                 rCond{end,1}{1,end}.fList = {};
                 if ~isempty(fList)
                     fListDiffMag   = replace(fList       ,'rec-venc0_','rec-venc*_');
@@ -503,6 +517,8 @@ switch info.dataSetLabel
                 fListTask = dir(fullfile(dirs{end,1}.bids,'func',['*_task-' rCond{end,1}{1,end}.task     '_*.nii.gz']));
                 fList     = intersect(fListAcq,fullfile({fListRec.folder },{fListRec.name })');
                 fList     = intersect(fList,fullfile({fListTask.folder},{fListTask.name})');
+                [~,b,~] = fileparts(fList); b = startsWith(b, 'N4_');
+                fList(b) = [];
                 rCond{end,1}{1,end}.fList = {};
                 if ~isempty(fList)
                     fListDiffMag   = replace(fList       ,'rec-venc0_','rec-venc*_');
@@ -551,6 +567,8 @@ switch info.dataSetLabel
                 fListTask = dir(fullfile(dirs{end,1}.bids,'func',['*_task-' rCond{end,1}{1,end}.task     '_*.nii.gz']));
                 fList     = intersect(fullfile({fListAcq.folder },{fListAcq.name })',fullfile({fListTask.folder},{fListTask.name})');
                 fList(contains(fList,{'desc-bck' 'desc-frnt'})) = [];
+                [~,b,~] = fileparts(fList); b = startsWith(b, 'N4_');
+                fList(b) = [];
                 rCond{end,1}{1,end}.fList = {};
                 if ~isempty(fList)
                     rCond{end,1}{1,end}.fList = fList;
@@ -589,6 +607,8 @@ switch info.dataSetLabel
                 fListPrsc = dir(fullfile(dirs{end,1}.bids,'func',['*_desc-' [regexprep(rCond{end,1}{1,end}.prsc,'\d+$','') '*'] '_*.nii.gz']));
                 fList     = intersect(fullfile({fListAcq.folder },{fListAcq.name })',fullfile({fListTask.folder},{fListTask.name})');
                 fList     = intersect(fList                                         ,fullfile({fListPrsc.folder},{fListPrsc.name})');
+                [~,b,~] = fileparts(fList); b = startsWith(b, 'N4_');
+                fList(b) = [];
                 rCond{end,1}{1,end}.fList = {};
                 if ~isempty(fList)
                     rCond{end,1}{1,end}.fList = fList;
@@ -627,6 +647,8 @@ switch info.dataSetLabel
                 fListPrsc = dir(fullfile(dirs{end,1}.bids,'func',['*_desc-' [regexprep(rCond{end,1}{1,end}.prsc,'\d+$','') '*'] '_*.nii.gz']));
                 fList     = intersect(fullfile({fListAcq.folder },{fListAcq.name })',fullfile({fListTask.folder},{fListTask.name})');
                 fList     = intersect(fList                                         ,fullfile({fListPrsc.folder},{fListPrsc.name})');
+                [~,b,~] = fileparts(fList); b = startsWith(b, 'N4_');
+                fList(b) = [];
                 rCond{end,1}{1,end}.fList = {};
                 if ~isempty(fList)
                     rCond{end,1}{1,end}.fList = fList;
@@ -663,6 +685,8 @@ switch info.dataSetLabel
                 fListAcq  = dir(fullfile(dirs{end,1}.bids,'func',['*_acq-'  rCond{end,1}{1,end}.acq '*_angio.nii.gz']));
                 fListTask = dir(fullfile(dirs{end,1}.bids,'func',['*_task-' rCond{end,1}{1,end}.task     '_*.nii.gz']));
                 fList     = intersect(fullfile({fListAcq.folder },{fListAcq.name })',fullfile({fListTask.folder},{fListTask.name})');
+                [~,b,~] = fileparts(fList); b = startsWith(b, 'N4_');
+                fList(b) = [];
                 rCond{end,1}{1,end}.fList = {};
                 if ~isempty(fList)
                     rCond{end,1}{1,end}.fList = fList;
@@ -701,6 +725,8 @@ switch info.dataSetLabel
                 fListTask = dir(fullfile(dirs{end,1}.bids,'func',['*_task-' rCond{end,1}{1,end}.task     '_*.nii.gz']));
                 fList     = intersect(fullfile({fListAcq.folder },{fListAcq.name })',fullfile({fListRec.folder },{fListRec.name })');
                 fList     = intersect(fList,fullfile({fListTask.folder},{fListTask.name})');
+                [~,b,~] = fileparts(fList); b = startsWith(b, 'N4_');
+                fList(b) = [];
                 rCond{end,1}{1,end}.fList = {};
                 if ~isempty(fList)
                     fListDiffMag   = replace(fList       ,'rec-venc0_','rec-venc*_');
@@ -788,6 +814,8 @@ switch info.dataSetLabel
                 fListAcq  = dir(fullfile(dirs{end,1}.bids,'func','*_bold.nii.gz'));
                 fListTask = dir(fullfile(dirs{end,1}.bids,'func',['*_task-' rCond{end,1}{1,end}.task     '_*.nii.gz']));
                 fList     = intersect(fullfile({fListAcq.folder },{fListAcq.name })',fullfile({fListTask.folder},{fListTask.name})');
+                [~,b,~] = fileparts(fList); b = startsWith(b, 'N4_');
+                fList(b) = [];
                 rCond{end,1}{1,end}.fList = {};
                 if ~isempty(fList)
                     rCond{end,1}{1,end}.fList = fList;
@@ -1038,6 +1066,18 @@ for r = 1:length(rCond)
 end
 
 
+% ---False movement correction---
+% In some cases a few frames within a run get all motion corrected to the same clearly wrong place.
+% This very sensitive to the base image--changing the base frame to the following and the problem goes away.
+% In the second column of falseMvmnt, we list the filenames of runs that show the problem.
+% The first column indicate the alternative frame index to use as the base image (default is 0, the first frame).
+falseMvmnt = {
+    '105' '/scratch/users/Proulx-S/doIt_generalPreproc/vsmDiamCenSur/prc/sub-vsmDiamCenSurP5/ses-2/acq-vfMRI_prsc-dflt/sub-vsmDrivenP5_ses-2_task-fixOnly_acq-vfMRIinflow_run-1_angio/preproc_volTs.nii.gz' % Still not very good. There is one significant displacement about 1/3 in the run. False motion correction happens before or after this displacement depending on the base image being from after or before the displacement, respectively.
+    '105' '/scratch/users/Proulx-S/doIt_generalPreproc/vsmDiamCenSur/prc/sub-vsmDiamCenSurP9/ses-1/acq-vfMRIpc_prsc-dflt/sub-vsmDiamCenSurP4_ses-1_acq-pcVenc7ap_rec-venc0_part-mag_task-fixOnly_run-5_angio/preproc_volTs.nii.gz' % Similar to the above
+    '150' '/scratch/users/Proulx-S/doIt_generalPreproc/vsmDiamCenSur/prc/sub-vsmDiamCenSurP10/ses-1/acq-vfMRI_prsc-dflt/sub-vsmDiamCenSurP5_ses-1_acq-vfMRIinflow_task-fixOnly_run-1_angio/preproc_volTs.nii.gz'
+    };
+
+
 
 
 
@@ -1189,19 +1229,15 @@ for s = 1:length(subList(sesIndList))
         % fDbMask = strjoin(fDbMask(end-2:end),filesep);
         % fDbMask = fullfile(runSet{S}{rs}.dbDirBidsDeriv,fDbMask);
 
-
-
-        %%% Restore BK
-        % BK = dir('/local/users/Proulx-S/db/*/*/bids/derivatives/*/*/*_volBrainMaskInv.nii.gz');
-        % for m = 1:length(BK)
-        %     MRIread(fullfile(BK(m).folder,BK(m).name))
-        %     copyfile(fullfile(BK(m).folder,BK(m).name),replace(fullfile(BK(m).folder,BK(m).name),'BK.nii.gz','.nii.gz'));
-        %     % [~,b] = fileparts(BK(m).name);
+        % %%% Restore BK
+        % fDbMaskInvBK = replace(fDbMaskInv,'.nii.gz','BK.nii.gz');
+        % if exist(fDbMaskInvBK,'file')
+        %     copyfile(fDbMaskInvBK,fDbMaskInv);
         % end
 
 
         %%% Copy from db if exists
-        if ~forceThis && exist(fDbMaskInv,'file')
+        if forceThis<2 && exist(fDbMaskInv,'file')
             copyfile(fDbMaskInv,runSet{S}{rs}.fMasks.fMaskInv);
         end
 
@@ -1234,9 +1270,11 @@ for s = 1:length(subList(sesIndList))
         % fMask = replace(fBase,'_volTs.nii.gz','_volBrainMaskInv.nii.gz');
         % runSet{S}{rs}.fMasks.fMaskInv = fMask;
         if forceThis || ~exist(runSet{S}{rs}.fMasks.fMaskInv,'file')
-            mri     = MRIread(fBase,1);
-            mri.vol = ones(mri.volsize);
-            MRIwrite(mri,runSet{S}{rs}.fMasks.fMaskInv);
+            if forceThis>1 || ~exist(runSet{S}{rs}.fMasks.fMaskInv,'file')
+                mri     = MRIread(fBase,1);
+                mri.vol = ones(mri.volsize);
+                MRIwrite(mri,runSet{S}{rs}.fMasks.fMaskInv);
+            end
             cmd{end+1} = ['scp sebp@takoyaki1:' runSet{S}{rs}.fMasks.fMaskInv ' sebp@takoyaki1:' fBase ' .'];
             cmd{end+1} = 'echo draw EXCLUSION mask for the BRAIN (brain=0, nonBrain=1)';
             cmd{end+1} = 'freeview -v \';
@@ -1311,7 +1349,7 @@ end
 
 
 
-forceThis   = 1;
+forceThis   = 0;
 verboseThis = 0;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Within-run motion correction
@@ -1319,6 +1357,7 @@ verboseThis = 0;
 disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
 disp('%% Within-run motion correction')
 disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+
 param.baseType = 'first'; % 'first' 'av' 'mcAv'
 for s = 1:length(subList(sesIndList))
     S = sesIndList(s);
@@ -1338,12 +1377,12 @@ for s = 1:length(subList(sesIndList))
         fBase = [];
         fMask = runSet{S}{rs}.fMasks.fMaskInv;
 
-        %%% Special case
-        if strcmp(runSet{S}{rs}.sub, 'vsmDiamCenSurP10') && strcmp(runSet{S}{rs}.ses, '1') && strcmp(runSet{S}{rs}.label,'acq-vfMRIpc_prsc-dflt')
-            param.baseInd = [0 0 0 0 1]';
-        else
-            param.baseInd = [];
-        end
+
+        %%% Special case of false movement
+        param.baseInd = ismember(fileparts(runSet{S}{rs}.initFiles.fPlumbList(:,1)),fileparts(falseMvmnt(:,2)));
+        ind = ismember(fileparts(falseMvmnt(:,2)),fileparts(runSet{S}{rs}.initFiles.fPlumbList(:,1)));
+        param.baseInd(param.baseInd) = str2num(char(falseMvmnt(ind,1)))
+        
 
         %%% Compute
         runSet{S}{rs}.wrMocoFiles = estimMotionWR2(runSet{S}{rs}.initFiles,param,fBase,fMask,forceThis,verboseThis);
@@ -1378,8 +1417,7 @@ end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-
-forceThis   = 1;
+forceThis   = 0;
 verboseThis = 0;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Between-run motion correction
@@ -1440,7 +1478,7 @@ end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-forceThis   = 1;
+forceThis   = 0;
 verboseThis = 0;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Finalize preprocessing (apply transformations in a single interpolation step)
@@ -1463,7 +1501,7 @@ end
 
 return
 
-forceThis   = 0;
+forceThis   = 1;
 verboseThis = 0;
 %%%%%%%%%%%%%%%%%%%%%%%%
 %% QA preproc run-by-run
@@ -1474,9 +1512,34 @@ disp('%%%%%%%%%%%%%%%%%%%%%%%%')
 
 for S = 1:length(runSet)
     for A = 1:length(runSet{S})
+        runSet{S}{A}
+        
+        
+        fOblq = runSet{S}{A}.finalFiles.fPreprocList{1};
+        runSet{S}{A}.fMasks.fMaskInvOblq = replace(runSet{S}{A}.fMasks.fMaskInv,'setPlumb_','setOblique_');
+        copyfile(runSet{S}{A}.fMasks.fMaskInv,runSet{S}{A}.fMasks.fMaskInvOblq);
+        MRIconform(runSet{S}{A}.fMasks.fMaskInvOblq,fOblq);
+        
+        runSet{S}{A}.fMasks.fMaskInvOblq
         QArun(runSet{S}{A}.finalFiles,runSet{S}{A}.fMasks.fMask,runSet{S}{A}.dbDirBidsDeriv,forceThis,verboseThis);
+        keyboard
+        close all
     end
 end
+
+% /scratch/users/Proulx-S/doIt_generalPreproc/vsmDiamCenSur/prc/sub-vsmDiamCenSurP2/ses-2/acq-vfMRI_prsc-dflt/sub-vsmDrivenP2_ses-2_task-50sPrd1sDur_acq-vfMRIinflow_run-*_angio/preproc_volTs.nii.gz
+%   wrong mask -> rerun motion correction
+% /scratch/users/Proulx-S/doIt_generalPreproc/vsmDiamCenSur/prc/sub-vsmDiamCenSurP6/ses-1/acq-vfMRI_prsc-dflt/sub-vsmDiamCenSurP1_ses-1_acq-vfMRIinflow_task-fixOnly_run-4_angio/preproc_volTs.nii.gz
+%   some uncorrected movement at the end
+% /scratch/users/Proulx-S/doIt_generalPreproc/vsmDiamCenSur/prc/sub-vsmDiamCenSurP5/ses-2/acq-vfMRI_prsc-dflt/sub-vsmDrivenP5_ses-2_task-fixOnly_acq-vfMRIinflow_run-1_angio/preproc_volTs.nii.gz
+%   false movement, also one real movement spike that is censored
+% /scratch/users/Proulx-S/doIt_generalPreproc/vsmDiamCenSur/prc/sub-vsmDiamCenSurP9/ses-1/acq-vfMRIpc_prsc-dflt/sub-vsmDiamCenSurP4_ses-1_acq-pcVenc7ap_rec-venc0_part-mag_task-fixOnly_run-5_angio/preproc_volTs.nii.gz
+%   false movement
+% /scratch/users/Proulx-S/doIt_generalPreproc/vsmDiamCenSur/prc/sub-vsmDiamCenSurP10/ses-1/acq-vfMRI_prsc-dflt/sub-vsmDiamCenSurP5_ses-1_acq-vfMRIinflow_task-fixOnly_run-1_angio/preproc_volTs.nii.gz
+%   false movement
+
+return
+
 
 % save tmp
 % return
@@ -1513,7 +1576,7 @@ end
 %% %%%%%%%%%%%%%%%%%%%%%
 
 
-
+return
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Combine sessions and cross-run QA
