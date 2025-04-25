@@ -1,6 +1,6 @@
 clear all
 close all
-force = 1;
+force = 0;
 info.dataSetLabel = 'vsmDiamCenSur';
 %%%%%%%%%%%%%%%%%%%%%
 %% Set up environment
@@ -1071,14 +1071,17 @@ end
 % This very sensitive to the base image--changing the base frame to the following and the problem goes away.
 % In the second column of falseMvmnt, we list the filenames of runs that show the problem.
 % The first column indicate the alternative frame index to use as the base image (default is 0, the first frame).
-falseMvmnt = {
-    '105' '/scratch/users/Proulx-S/doIt_generalPreproc/vsmDiamCenSur/prc/sub-vsmDiamCenSurP5/ses-2/acq-vfMRI_prsc-dflt/sub-vsmDrivenP5_ses-2_task-fixOnly_acq-vfMRIinflow_run-1_angio/preproc_volTs.nii.gz' % Still not very good. There is one significant displacement about 1/3 in the run. False motion correction happens before or after this displacement depending on the base image being from after or before the displacement, respectively.
+falseMvmnt1 = {
     '105' '/scratch/users/Proulx-S/doIt_generalPreproc/vsmDiamCenSur/prc/sub-vsmDiamCenSurP9/ses-1/acq-vfMRIpc_prsc-dflt/sub-vsmDiamCenSurP4_ses-1_acq-pcVenc7ap_rec-venc0_part-mag_task-fixOnly_run-5_angio/preproc_volTs.nii.gz' % Similar to the above
-    '150' '/scratch/users/Proulx-S/doIt_generalPreproc/vsmDiamCenSur/prc/sub-vsmDiamCenSurP10/ses-1/acq-vfMRI_prsc-dflt/sub-vsmDiamCenSurP5_ses-1_acq-vfMRIinflow_task-fixOnly_run-1_angio/preproc_volTs.nii.gz'
     };
 
-
-
+falseMvmnt2 = {
+    '110' '/scratch/users/Proulx-S/doIt_generalPreproc/vsmDiamCenSur/prc/sub-vsmDiamCenSurP5/ses-2/acq-vfMRI_prsc-dflt/sub-vsmDrivenP5_ses-2_task-fixOnly_acq-vfMRIinflow_run-1_angio/preproc_volTs.nii.gz' % Still not very good. There is one significant displacement about 1/3 in the run. False motion correction happens before or after this displacement depending on the base image being from after or before the displacement, respectively.
+    '170' '/scratch/users/Proulx-S/doIt_generalPreproc/vsmDiamCenSur/prc/sub-vsmDiamCenSurP10/ses-1/acq-vfMRI_prsc-dflt/sub-vsmDiamCenSurP5_ses-1_acq-vfMRIinflow_task-fixOnly_run-1_angio/preproc_volTs.nii.gz'
+     '10' '/scratch/users/Proulx-S/doIt_generalPreproc/vsmDiamCenSur/prc/sub-vsmDiamCenSurP10/ses-1/acq-vfMRIpc_prsc-dflt/sub-vsmDiamCenSurP5_ses-1_acq-pcVenc14ap_rec-venc0_part-mag_task-50sPrd5sDur_run-1_angio/preproc_volTs.nii.gz' % just two false displacement so I just discarded them both
+    }; % not rerun yet. just discard the run
+    
+falseMvmnt = cat(1,falseMvmnt1,falseMvmnt2);
 
 
 % %%% Combine different sessions in the same runCond ----- too complicated
@@ -1499,9 +1502,9 @@ for s = 1:length(subList(sesIndList))
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-return
 
-forceThis   = 1;
+
+forceThis   = 0;
 verboseThis = 0;
 %%%%%%%%%%%%%%%%%%%%%%%%
 %% QA preproc run-by-run
@@ -1510,20 +1513,22 @@ disp('%%%%%%%%%%%%%%%%%%%%%%%%')
 disp('%% QA preproc run-by-run')
 disp('%%%%%%%%%%%%%%%%%%%%%%%%')
 
-for S = 1:length(runSet)
+close all
+for S = 14:length(runSet)
     for A = 1:length(runSet{S})
+        disp(' ')
+        disp(' ')
+        disp(' ')
+        disp(' ')
+        disp('------------------')
+        disp('------------------')
+        disp('------------------')
+        disp('------------------')
         runSet{S}{A}
         
-        
-        fOblq = runSet{S}{A}.finalFiles.fPreprocList{1};
-        runSet{S}{A}.fMasks.fMaskInvOblq = replace(runSet{S}{A}.fMasks.fMaskInv,'setPlumb_','setOblique_');
-        copyfile(runSet{S}{A}.fMasks.fMaskInv,runSet{S}{A}.fMasks.fMaskInvOblq);
-        MRIconform(runSet{S}{A}.fMasks.fMaskInvOblq,fOblq);
-        
-        runSet{S}{A}.fMasks.fMaskInvOblq
         QArun(runSet{S}{A}.finalFiles,runSet{S}{A}.fMasks.fMask,runSet{S}{A}.dbDirBidsDeriv,forceThis,verboseThis);
-        keyboard
-        close all
+        % keyboard
+        % close all
     end
 end
 
@@ -1576,7 +1581,7 @@ return
 %% %%%%%%%%%%%%%%%%%%%%%
 
 
-return
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Combine sessions and cross-run QA
@@ -1709,8 +1714,8 @@ QA.subList = subListU; clear subListU
 
 
 
-forceThis   = 1;
-verboseThis = 1;
+forceThis   = 0;
+verboseThis = 0;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Save proprocessing files
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1732,18 +1737,18 @@ if forceThis || ~exist(info.workFile,'file')
     
     %%% Save physio files separately because they are large
     disp('saving phs separately')
-    try
-        save(replace(info.workFile,'.mat','_phs.mat'),'phs');
-    catch
+    save(replace(info.workFile,'.mat','_phs.mat'),'phs');
+    [msg,id]=lastwarn('');     % This will save the last warning
+    if strcmp(id,'MATLAB:save:sizeTooBigForMATFile')    % compare the id of the warning with the one we are looking for
         save(replace(info.workFile,'.mat','_phs.mat'),'phs','-v7.3');
     end
 
     %%% Save other files
     disp('saving other files')
     phsOrig = phs; phs = []; phs.f = replace(info.workFile,'.mat','_phs.mat');
-    try
-        save(info.workFile,'rCond','runSet','subList','sesList','acqSet','QA','volAnat');
-    catch
+    save(info.workFile,'rCond','runSet','subList','sesList','acqSet','QA','volAnat');
+    [msg,id]=lastwarn('');     % This will save the last warning
+    if strcmp(id,'MATLAB:save:sizeTooBigForMATFile')    % compare the id of the warning with the one we are looking for
         save(info.workFile,'rCond','runSet','subList','sesList','acqSet','QA','volAnat','-v7.3');
     end
     
@@ -1807,9 +1812,9 @@ phs = [];
 info.subList  = subList;
 info.acqList  = runCondAcqList';
 info.taskList = runCondStimList';
-try
-    save(info.indexFile,'rCond','info','QA');
-catch
+save(info.indexFile,'rCond','info','QA');
+[msg,id]=lastwarn('');     % This will save the last warning
+if strcmp(id,'MATLAB:save:sizeTooBigForMATFile')    % compare the id of the warning with the one we are looking for
     save(info.indexFile,'rCond','info','QA','-v7.3');
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
