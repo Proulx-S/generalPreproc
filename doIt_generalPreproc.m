@@ -139,8 +139,6 @@ switch info.dataSetLabel
             for ses = 1:length(sesDbListTmp{sub})
                 if isempty(sesDbListTmp{sub}{ses}); continue; end
 
-                % if sub==1 && ses==4; keyboard; end
-
                 if ~exist('subList','var');         subList = {}; end
                 subList{end+1,1}                            = [info.dataSetLabel 'P' num2str(sub)];
                 if ~exist('sesList','var');         sesList = {}; end
@@ -953,6 +951,8 @@ end
 
 
 
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Assert bids structure is well defined and deal with special cases
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1513,8 +1513,8 @@ disp('%%%%%%%%%%%%%%%%%%%%%%%%')
 disp('%% QA preproc run-by-run')
 disp('%%%%%%%%%%%%%%%%%%%%%%%%')
 
-close all
-for S = 14:length(runSet)
+% close all
+for S = 1:length(runSet)
     for A = 1:length(runSet{S})
         disp(' ')
         disp(' ')
@@ -1524,7 +1524,7 @@ for S = 14:length(runSet)
         disp('------------------')
         disp('------------------')
         disp('------------------')
-        runSet{S}{A}
+        % runSet{S}{A}
         
         QArun(runSet{S}{A}.finalFiles,runSet{S}{A}.fMasks.fMask,runSet{S}{A}.dbDirBidsDeriv,forceThis,verboseThis);
         % keyboard
@@ -1543,7 +1543,7 @@ end
 % /scratch/users/Proulx-S/doIt_generalPreproc/vsmDiamCenSur/prc/sub-vsmDiamCenSurP10/ses-1/acq-vfMRI_prsc-dflt/sub-vsmDiamCenSurP5_ses-1_acq-vfMRIinflow_task-fixOnly_run-1_angio/preproc_volTs.nii.gz
 %   false movement
 
-return
+
 
 
 % save tmp
@@ -1579,6 +1579,7 @@ return
 % QAspike
 
 %% %%%%%%%%%%%%%%%%%%%%%
+
 
 
 
@@ -1717,7 +1718,7 @@ QA.subList = subListU; clear subListU
 forceThis   = 0;
 verboseThis = 0;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Save proprocessing files
+%% Save preprocessing files
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%')
 disp('%% Save proprocessing files')
