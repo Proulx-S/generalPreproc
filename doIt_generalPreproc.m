@@ -1,7 +1,7 @@
 clear all
 close all
 force = 0;
-info.dataSetLabel = 'vsmDiamCenSur';
+info.dataSetLabel = 'satinV2'; % vsmDiamCenSur, satinV2 
 %%%%%%%%%%%%%%%%%%%%%
 %% Set up environment
 %%%%%%%%%%%%%%%%%%%%%
@@ -87,12 +87,133 @@ if force || ~exist(info.workFile,'file')
 %% Variables, Paths and stim/acq info
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 switch info.dataSetLabel
+    case 'satinV2'
+        %%% Source data location
+        info.dbDir = fullfile(storageDir,'db');
+
+        %%% Preprocessing location
+        info.prcDir = fullfile(scratchDir,workScript,info.dataSetLabel); if ~exist(info.prcDir,'dir'); mkdir(info.prcDir); end
+
+        %%% Subject and session info [!!! sessions from the same subject must be entered in order of acquisition !!!]
+        sesDbListTmp = {};
+        sesDbListTmp{end+1,1}{    1,1} = fullfile(info.dbDir,'vsmRingP1/2024-10-08--bay2--vsmRingP1' );
+
+
+        for sub = 1:length(sesDbListTmp)
+            for ses = 1:length(sesDbListTmp{sub})
+                if isempty(sesDbListTmp{sub}{ses}); continue; end
+
+                if ~exist('subList','var');         subList = {}; end
+                subList{end+1,1}                            = [info.dataSetLabel 'P' num2str(sub)];
+                if ~exist('sesList','var');         sesList = {}; end
+                sesList{end+1,1}                            = num2str(ses);
+                if ~exist('sesDbList','var');     sesDbList = {}; end
+                sesDbList{end+1,1}                          = sesDbListTmp{sub}{ses};
+                if ~exist('prcDirList','var');   prcDirList = {}; end
+                prcDirList{end+1,1}                         = fullfile(info.prcDir ,['sub-' subList{end}],['ses-' sesList{end}]);
+                if ~exist('dirs','var');               dirs = {}; end
+                if ~exist('dirsOrig','var');       dirsOrig = {}; end
+                
+                if ~exist('rCond','var');     rCond = {}; end
+                rCond{end+1,1}   = {};
+                % if ~exist('dummyList','var'); dummyList = {}; end
+                % dummyList{end+1,1} = {};
+
+                disp('Copying data from db')
+                forceThis = 0;
+                [dirs{end+1,1},dirsOrig{end+1,1}] = db2bids(sesDbListTmp{sub}{ses},subList{end},sesList{end},info,forceThis);
+                [~,acqDate,~] = fileparts(sesDbList{end}); acqDate = strsplit(acqDate,'--'); acqDate = datetime(acqDate{1},'InputFormat','yyyy-MM-dd');
+
+                %%%%% 50sPrd1sDur --- satinBack --- mid
+                rCond{end,1}{1,end+1} = runCond;
+                rCond{end,1}{1,end}.dirs     = dirs{end,1};
+                rCond{end,1}{1,end}.dirsOrig = dirsOrig{end,1};
+                rCond{end,1}{1,end}.sub  = subList{end};
+                rCond{end,1}{1,end}.ses  = sesList{end};
+                rCond{end,1}{1,end}.acq  = 'satinF0B1';
+                rCond{end,1}{1,end}.prsc = 'dflt';
+                rCond{end,1}{1,end}.task = '50sPrd1sDur';
+                dsgn = runDsgn;
+                dsgn.task = rCond{end,1}{1,end}.task;
+                dsgn.dt   = 0.840;
+                initRest   = dsgn.dt*12;
+                stimPeriod = dsgn.dt*57;
+                stimDur    = dsgn.dt*1;
+                runDur     = dsgn.dt*354;
+                dsgn.onsetList = initRest:stimPeriod:(runDur-stimPeriod);
+                dsgn.ondurList = ones(size(dsgn.onsetList)).*(stimDur);
+                dsgn.cond      = ones(size(dsgn.onsetList));
+                dsgn.condLabel = {'stim'};
+                rCond{end,1}{1,end}.dsgn  = dsgn;
+                fListAcq  = dir(fullfile(dirs{end,1}.bids,'func',['*_acq-'  rCond{end,1}{1,end}.acq '*_angio.nii.gz']));
+                fListTask = dir(fullfile(dirs{end,1}.bids,'func',['*_task-' rCond{end,1}{1,end}.task     '_*.nii.gz']));
+                fList     = intersect(fullfile({fListAcq.folder },{fListAcq.name })',fullfile({fListTask.folder},{fListTask.name})');
+                fList(contains(fList,{'desc-bck' 'desc-frnt'})) = [];
+                [~,b,~] = fileparts(fList); b = startsWith(b, 'N4_');
+                fList(b) = [];
+                rCond{end,1}{1,end}.fList = {};
+                if ~isempty(fList)
+                    rCond{end,1}{1,end}.fList = fList;
+                    tr = JSNread(fList,{'RepetitionTime' 'RepetitionTimeExcitation'});
+                    rCond{end,1}{1,end}.tr    = cat(1,tr{:,1}); %sec
+                    rCond{end,1}{1,end}.trExc = cat(1,tr{:,2}); %sec
+                    nShot = round(rCond{end,1}{1,end}.tr ./ rCond{end,1}{1,end}.trExc);
+                    rCond{end,1}{1,end}.trExc = rCond{end,1}{1,end}.tr ./ nShot;
+                    rCond{end,1}{1,end}.nDummy = ceil(3./(rCond{end,1}{1,end}.trExc)./nShot);
+                end
+                rCond{end,1}{1,end}.date  = repmat(acqDate,size(rCond{end,1}{1,end}.fList));
+
+                %%%%% 50sPrd1sDur --- satinFront --- mid
+                rCond{end,1}{1,end+1} = runCond;
+                rCond{end,1}{1,end}.dirs     = dirs{end,1};
+                rCond{end,1}{1,end}.dirsOrig = dirsOrig{end,1};
+                rCond{end,1}{1,end}.sub  = subList{end};
+                rCond{end,1}{1,end}.ses  = sesList{end};
+                rCond{end,1}{1,end}.acq  = 'satinF1B0';
+                rCond{end,1}{1,end}.prsc = 'dflt';
+                rCond{end,1}{1,end}.task = '50sPrd1sDur';
+                dsgn = runDsgn;
+                dsgn.task = rCond{end,1}{1,end}.task;
+                dsgn.dt   = 0.840;
+                initRest   = dsgn.dt*12;
+                stimPeriod = dsgn.dt*57;
+                stimDur    = dsgn.dt*1;
+                runDur     = dsgn.dt*354;
+                dsgn.onsetList = initRest:stimPeriod:(runDur-stimPeriod);
+                dsgn.ondurList = ones(size(dsgn.onsetList)).*(stimDur);
+                dsgn.cond      = ones(size(dsgn.onsetList));
+                dsgn.condLabel = {'stim'};
+                rCond{end,1}{1,end}.dsgn  = dsgn;
+                fListAcq  = dir(fullfile(dirs{end,1}.bids,'func',['*_acq-'  rCond{end,1}{1,end}.acq '*_angio.nii.gz']));
+                fListTask = dir(fullfile(dirs{end,1}.bids,'func',['*_task-' rCond{end,1}{1,end}.task     '_*.nii.gz']));
+                fList     = intersect(fullfile({fListAcq.folder },{fListAcq.name })',fullfile({fListTask.folder},{fListTask.name})');
+                fList(contains(fList,{'desc-bck' 'desc-frnt'})) = [];
+                [~,b,~] = fileparts(fList); b = startsWith(b, 'N4_');
+                fList(b) = [];
+                rCond{end,1}{1,end}.fList = {};
+                if ~isempty(fList)
+                    rCond{end,1}{1,end}.fList = fList;
+                    tr = JSNread(fList,{'RepetitionTime' 'RepetitionTimeExcitation'});
+                    rCond{end,1}{1,end}.tr    = cat(1,tr{:,1}); %sec
+                    rCond{end,1}{1,end}.trExc = cat(1,tr{:,2}); %sec
+                    nShot = round(rCond{end,1}{1,end}.tr ./ rCond{end,1}{1,end}.trExc);
+                    rCond{end,1}{1,end}.trExc = rCond{end,1}{1,end}.tr ./ nShot;
+                    rCond{end,1}{1,end}.nDummy = ceil(3./(rCond{end,1}{1,end}.trExc)./nShot);
+                end
+                rCond{end,1}{1,end}.date  = repmat(acqDate,size(rCond{end,1}{1,end}.fList));
+
+
+            end
+        end
+
+
     case 'vsmDiamCenSur'
         % % info.datasetDir = fullfile(storageDir,info.dataSetLabel);
         % info.pipId      = workScript;
         % info.bidsDir    = fullfile(storageDir,'bids');   if ~exist(info.bidsDir,'dir'); mkdir(info.bidsDir); end
         % info.srcDir     = fullfile(storageDir,'source'); if ~exist(info.srcDir ,'dir'); mkdir(info.srcDir ); end
         % info.prcDir     = fullfile(info.datasetDir,'proc');   if ~exist(info.prcDir ,'dir'); mkdir(info.prcDir ); end
+        
         %%% Source data location
         info.dbDir = fullfile(storageDir,'db');
 
@@ -963,40 +1084,54 @@ for RS = 1:length(rCond)
     % tmp(~cellfun('isempty',{tmp.fList}))
 
     %%% Correct special cases
-    if isempty(S); continue; end
-    for s = 1:length(S)
-        switch str{s}
-            case 'sub-vsmDiamCenSurP2_ses-1_acq-vfMRI_task-50sPrd5sDur'
-                % remove this naming difference
-                for r = 1:numel(rCond{RS}{S(s)}.fList)
-                    old = rCond{RS}{S(s)}.fList{r};
-                    new = strsplit(old,'_'); new(contains(new,'chunk-')) = []; new = strjoin(new,'_');
-                    if ~strcmp(old,new)
-                        movefile(        old                   ,        new                   );
-                        movefile(replace(old,'.nii.gz','.json'),replace(new,'.nii.gz','.json'));
-                        rCond{RS}{S(s)}.fList{r} = new;
-                    end
+    switch info.dataSetLabel
+        case 'satinV2'
+            for s = 1:length(S)
+                % echo 1
+                ind = contains(rCond{RS}{S(s)}.fList(:,1),'echo-1');
+                rCond{RS}{S(s)}.fList  = rCond{RS}{S(s)}.fList(ind,1);
+                rCond{RS}{S(s)}.date   = rCond{RS}{S(s)}.date(ind,1);
+                rCond{RS}{S(s)}.tr     = rCond{RS}{S(s)}.tr(ind,1);
+                rCond{RS}{S(s)}.trExc  = rCond{RS}{S(s)}.trExc(ind,1);
+                rCond{RS}{S(s)}.nDummy = rCond{RS}{S(s)}.nDummy(ind,1);
+            end
+
+        case 'vsmDiamCenSur'
+            if isempty(S); continue; end
+            for s = 1:length(S)
+                switch str{s}
+                    case 'sub-vsmDiamCenSurP2_ses-1_acq-vfMRI_task-50sPrd5sDur'
+                        % remove this naming difference
+                        for r = 1:numel(rCond{RS}{S(s)}.fList)
+                            old = rCond{RS}{S(s)}.fList{r};
+                            new = strsplit(old,'_'); new(contains(new,'chunk-')) = []; new = strjoin(new,'_');
+                            if ~strcmp(old,new)
+                                movefile(        old                   ,        new                   );
+                                movefile(replace(old,'.nii.gz','.json'),replace(new,'.nii.gz','.json'));
+                                rCond{RS}{S(s)}.fList{r} = new;
+                            end
+                        end
+                    % case 'sub-vsmDiamCenSurP9_ses-1_acq-vfMRI_task-50sPrd5sDur' % not actually necessary anymore since this subject cannot be included because of an error at acquisition regarding stimulus presentation
+                    %     % split the two different slice presciptions
+                    %     ind = [2 2 2 1 1];
+                    %     if size(rCond{RS}{S(s)}.fList,1)~=length(ind)
+                    %         disp('runSet already split');
+                    %         continue
+                    %     end
+                    %     rCond{RS}{end+1} = rCond{RS}{S(s)};
+                    %     rCond{RS}{S(s)}.fList(ind~=1)  = [];
+                    %     rCond{RS}{S(s)}.date(ind~=1)   = [];
+                    %     rCond{RS}{S(s)}.bhvr(ind~=1)   = [];
+                    %     rCond{RS}{S(s)}.nDummy(ind~=1) = [];
+                    %     rCond{RS}{end}.prsc = 'back7';
+                    %     rCond{RS}{end}.fList(ind~=2)  = [];
+                    %     rCond{RS}{end}.date(ind~=2)   = [];
+                    %     rCond{RS}{end}.bhvr(ind~=2)   = [];
+                    %     rCond{RS}{end}.nDummy(ind~=2) = [];
+                    otherwise
+                        dbstack; error('please specify how to deal with that special case')
                 end
-            % case 'sub-vsmDiamCenSurP9_ses-1_acq-vfMRI_task-50sPrd5sDur' % not actually necessary anymore since this subject cannot be included because of an error at acquisition regarding stimulus presentation
-            %     % split the two different slice presciptions
-            %     ind = [2 2 2 1 1];
-            %     if size(rCond{RS}{S(s)}.fList,1)~=length(ind)
-            %         disp('runSet already split');
-            %         continue
-            %     end
-            %     rCond{RS}{end+1} = rCond{RS}{S(s)};
-            %     rCond{RS}{S(s)}.fList(ind~=1)  = [];
-            %     rCond{RS}{S(s)}.date(ind~=1)   = [];
-            %     rCond{RS}{S(s)}.bhvr(ind~=1)   = [];
-            %     rCond{RS}{S(s)}.nDummy(ind~=1) = [];
-            %     rCond{RS}{end}.prsc = 'back7';
-            %     rCond{RS}{end}.fList(ind~=2)  = [];
-            %     rCond{RS}{end}.date(ind~=2)   = [];
-            %     rCond{RS}{end}.bhvr(ind~=2)   = [];
-            %     rCond{RS}{end}.nDummy(ind~=2) = [];
-            otherwise
-                dbstack; error('please specify how to deal with that special case')
-        end
+            end
     end
 end
 
@@ -1019,10 +1154,18 @@ end
 %%% Add anat to rCond
 for RS = 1:length(rCond)
     for c = 1:length(rCond{RS})
-        rCond{RS}{c}.volAnat.avMap      = avMap{RS}.fList;
-        rCond{RS}{c}.volAnat.pcMRA      = pcMRA{RS}.fList;
-        rCond{RS}{c}.volAnat.tof        = tof{RS}.fList;
-        rCond{RS}{c}.volAnat.memprage   = memprage{RS}.fList;
+        if exist('avMap','var')
+            rCond{RS}{c}.volAnat.avMap      = avMap{RS}.fList;
+        end
+        if exist('pcMRA','var')
+            rCond{RS}{c}.volAnat.pcMRA      = pcMRA{RS}.fList;
+        end
+        if exist('tof','var')
+            rCond{RS}{c}.volAnat.tof        = tof{RS}.fList;
+        end
+        if exist('memprage','var')
+            rCond{RS}{c}.volAnat.memprage   = memprage{RS}.fList;
+        end
     end
 end
 clear avMap pcMRA memprage tof
@@ -1031,57 +1174,85 @@ clear avMap pcMRA memprage tof
 ind = cellfun('isempty',rCond);
 rCond(ind)      = [];
 % avMap(ind)      = [];
-b0(ind)         = [];
-b1(ind)         = [];
-dirs(ind)       = [];
-dirsOrig(ind)   = [];
-% memprage(ind)   = [];
-% pcMRA(ind)      = [];
-phs(ind)        = [];
-prcDirList(ind) = [];
-sesDbList(ind)  = [];
-sesList(ind)    = [];
-subList(ind)    = [];
-% tof(ind)        = [];
-
-%%% Further remove the few runs that were reconstructed with adaptive combine by mistake
-badList = {
-    'sub-vsmRingP1_ses-1_task-50sPrd1sDur_acq-vfMRIinflow_desc-bck_run-2_angio'
-    'sub-vsmRingP1_ses-1_task-50sPrd1sDur_acq-vfMRIinflow_desc-bck_run-3_angio'
-    'sub-vsmRingP1_ses-1_task-50sPrd1sDur_acq-vfMRIinflow_desc-frnt_run-2_angio'
-    'sub-vsmRingP1_ses-1_task-50sPrd1sDur_acq-vfMRIinflow_desc-frnt_run-3_angio'
-    };
-for r = 1:length(rCond)
-    for c = 1:length(rCond{r})
-        badInd = contains(rCond{r}{c}.fList(:,1),badList);
-        if any(badInd)
-            rCond{r}{c}.fList(badInd,:)  = [];
-            rCond{r}{c}.date(badInd,:)   = [];
-            rCond{r}{c}.tr(badInd,:)     = [];
-            rCond{r}{c}.trExc(badInd,:)  = [];
-            rCond{r}{c}.nDummy(badInd,:) = [];
-            rCond{r}{c}.bhvr(badInd,:)   = [];
-        end
-    end
+if exist('b0','var')
+    b0(ind)         = [];
+end
+if exist('b1','var')
+    b1(ind)         = [];
+end
+if exist('dirs','var')
+    dirs(ind)       = [];
+end
+if exist('dirsOrig','var')
+    dirsOrig(ind)   = [];
+end
+if exist('phs','var')
+    phs(ind)        = [];
+end
+if exist('prcDirList','var')
+    prcDirList(ind) = [];
+end
+if exist('sesDbList','var')
+    sesDbList(ind)  = [];
+end
+if exist('sesList','var')
+    sesList(ind)    = [];
+end
+if exist('subList','var')
+    subList(ind)    = [];
+end
+if exist('tof','var')
+    tof(ind)        = [];
 end
 
+%%% Further remove the few runs that were reconstructed with adaptive combine by mistake
+switch info.dataSetLabel
+    case 'satinV2'
+    case 'vsmDiamCenSur'
+        badList = {
+            'sub-vsmRingP1_ses-1_task-50sPrd1sDur_acq-vfMRIinflow_desc-bck_run-2_angio'
+            'sub-vsmRingP1_ses-1_task-50sPrd1sDur_acq-vfMRIinflow_desc-bck_run-3_angio'
+            'sub-vsmRingP1_ses-1_task-50sPrd1sDur_acq-vfMRIinflow_desc-frnt_run-2_angio'
+            'sub-vsmRingP1_ses-1_task-50sPrd1sDur_acq-vfMRIinflow_desc-frnt_run-3_angio'
+            };
+        for r = 1:length(rCond)
+            for c = 1:length(rCond{r})
+                badInd = contains(rCond{r}{c}.fList(:,1),badList);
+                if any(badInd)
+                    rCond{r}{c}.fList(badInd,:)  = [];
+                    rCond{r}{c}.date(badInd,:)   = [];
+                    rCond{r}{c}.tr(badInd,:)     = [];
+                    rCond{r}{c}.trExc(badInd,:)  = [];
+                    rCond{r}{c}.nDummy(badInd,:) = [];
+                    rCond{r}{c}.bhvr(badInd,:)   = [];
+                end
+            end
+        end
+    end
 
-% ---False movement correction---
-% In some cases a few frames within a run get all motion corrected to the same clearly wrong place.
-% This very sensitive to the base image--changing the base frame to the following and the problem goes away.
-% In the second column of falseMvmnt, we list the filenames of runs that show the problem.
-% The first column indicate the alternative frame index to use as the base image (default is 0, the first frame).
-falseMvmnt1 = {
-    '105' '/scratch/users/Proulx-S/doIt_generalPreproc/vsmDiamCenSur/prc/sub-vsmDiamCenSurP9/ses-1/acq-vfMRIpc_prsc-dflt/sub-vsmDiamCenSurP4_ses-1_acq-pcVenc7ap_rec-venc0_part-mag_task-fixOnly_run-5_angio/preproc_volTs.nii.gz' % Similar to the above
-    };
 
-falseMvmnt2 = {
-    '110' '/scratch/users/Proulx-S/doIt_generalPreproc/vsmDiamCenSur/prc/sub-vsmDiamCenSurP5/ses-2/acq-vfMRI_prsc-dflt/sub-vsmDrivenP5_ses-2_task-fixOnly_acq-vfMRIinflow_run-1_angio/preproc_volTs.nii.gz' % Still not very good. There is one significant displacement about 1/3 in the run. False motion correction happens before or after this displacement depending on the base image being from after or before the displacement, respectively.
-    '170' '/scratch/users/Proulx-S/doIt_generalPreproc/vsmDiamCenSur/prc/sub-vsmDiamCenSurP10/ses-1/acq-vfMRI_prsc-dflt/sub-vsmDiamCenSurP5_ses-1_acq-vfMRIinflow_task-fixOnly_run-1_angio/preproc_volTs.nii.gz'
-     '10' '/scratch/users/Proulx-S/doIt_generalPreproc/vsmDiamCenSur/prc/sub-vsmDiamCenSurP10/ses-1/acq-vfMRIpc_prsc-dflt/sub-vsmDiamCenSurP5_ses-1_acq-pcVenc14ap_rec-venc0_part-mag_task-50sPrd5sDur_run-1_angio/preproc_volTs.nii.gz' % just two false displacement so I just discarded them both
-    }; % not rerun yet. just discard the run
-    
-falseMvmnt = cat(1,falseMvmnt1,falseMvmnt2);
+
+switch info.dataSetLabel
+    case 'satinV2'
+    case 'vsmDiamCenSur'
+            
+        % ---False movement correction---
+        % In some cases a few frames within a run get all motion corrected to the same clearly wrong place.
+        % This very sensitive to the base image--changing the base frame to the following and the problem goes away.
+        % In the second column of falseMvmnt, we list the filenames of runs that show the problem.
+        % The first column indicate the alternative frame index to use as the base image (default is 0, the first frame).
+        falseMvmnt1 = {
+            '105' '/scratch/users/Proulx-S/doIt_generalPreproc/vsmDiamCenSur/prc/sub-vsmDiamCenSurP9/ses-1/acq-vfMRIpc_prsc-dflt/sub-vsmDiamCenSurP4_ses-1_acq-pcVenc7ap_rec-venc0_part-mag_task-fixOnly_run-5_angio/preproc_volTs.nii.gz' % Similar to the above
+            };
+
+        falseMvmnt2 = {
+            '110' '/scratch/users/Proulx-S/doIt_generalPreproc/vsmDiamCenSur/prc/sub-vsmDiamCenSurP5/ses-2/acq-vfMRI_prsc-dflt/sub-vsmDrivenP5_ses-2_task-fixOnly_acq-vfMRIinflow_run-1_angio/preproc_volTs.nii.gz' % Still not very good. There is one significant displacement about 1/3 in the run. False motion correction happens before or after this displacement depending on the base image being from after or before the displacement, respectively.
+            '170' '/scratch/users/Proulx-S/doIt_generalPreproc/vsmDiamCenSur/prc/sub-vsmDiamCenSurP10/ses-1/acq-vfMRI_prsc-dflt/sub-vsmDiamCenSurP5_ses-1_acq-vfMRIinflow_task-fixOnly_run-1_angio/preproc_volTs.nii.gz'
+            '10' '/scratch/users/Proulx-S/doIt_generalPreproc/vsmDiamCenSur/prc/sub-vsmDiamCenSurP10/ses-1/acq-vfMRIpc_prsc-dflt/sub-vsmDiamCenSurP5_ses-1_acq-pcVenc14ap_rec-venc0_part-mag_task-50sPrd5sDur_run-1_angio/preproc_volTs.nii.gz' % just two false displacement so I just discarded them both
+            }; % not rerun yet. just discard the run
+            
+        falseMvmnt = cat(1,falseMvmnt1,falseMvmnt2);
+end
 
 
 % %%% Combine different sessions in the same runCond ----- too complicated
@@ -1202,6 +1373,11 @@ end
 %% %%%%%%%%%%%%%%
 
 
+% char(runSet{1}{1}.initFiles.fPlumbSmr.runAv.fList)
+% char(runSet{1}{2}.initFiles.fPlumbSmr.runAv.fList)
+% return
+
+
 
 forceThis   = 0;
 verboseThis = 0;
@@ -1219,6 +1395,7 @@ for s = 1:length(subList(sesIndList))
     for rs = 1:length(runSet{S})
         if isempty(runSet{S}{rs}.fList); continue; end
         %%% Set preproc mask filenames
+        % runSet{S}{rs}.dbDirBidsDeriv = fullfile(info.dbDir,info.dataSetLabel)
         runSet{S}{rs}.dbDirBidsDeriv = fullfile(runSet{S}{rs}.dbDir,'bids','derivatives');
         fBase = char(runSet{S}{rs}.initFiles.fPlumbSmr.sesCat.runAv.fList(:,1));
         runSet{S}{rs}.fMasks.fMaskInv = replace(fBase,'_volTs.nii.gz','_volBrainMaskInv.nii.gz');
