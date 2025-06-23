@@ -1,7 +1,7 @@
 clear all
 close all
-force = 0;
-info.dataSetLabel = 'satinV2'; % vsmDiamCenSur, satinV2 
+force = 1;
+info.dataSetLabel = 'vsmDiamCenSur'; % vsmDiamCenSur, satinV2 
 %%%%%%%%%%%%%%%%%%%%%
 %% Set up environment
 %%%%%%%%%%%%%%%%%%%%%
@@ -1087,8 +1087,17 @@ for RS = 1:length(rCond)
     switch info.dataSetLabel
         case 'satinV2'
             for s = 1:length(S)
-                % echo 1
-                ind = contains(rCond{RS}{S(s)}.fList(:,1),'echo-1');
+                %multiple echoes
+                [~,rCond{RS}{S(s)}.bidsList,~] = fileparts(replace(rCond{RS}{S(s)}.fList,'.nii.gz',''));
+                for i = 1:size(rCond{RS}{S(s)}.bidsList,1)
+                    rCond{RS}{S(s)}.bidsList{i} = strsplit(rCond{RS}{S(s)}.bidsList{i},'_');
+                end
+                rCond{RS}{S(s)}.bidsList = cat(1,rCond{RS}{S(s)}.bidsList{:});
+
+                
+
+                ind = contains(rCond{RS}{S(s)}.fList,'echo-');
+                rCond{RS}{S(s)}.fList(ind)
                 rCond{RS}{S(s)}.fList  = rCond{RS}{S(s)}.fList(ind,1);
                 rCond{RS}{S(s)}.date   = rCond{RS}{S(s)}.date(ind,1);
                 rCond{RS}{S(s)}.tr     = rCond{RS}{S(s)}.tr(ind,1);

@@ -114,3 +114,4 @@ octave-workspace
 # Cursor
 *.cursorignore
 *.code-workspace
+test/*
