@@ -1,6 +1,6 @@
 clear all
 close all
-force = 1;
+force = 0;
 info.dataSetLabel = 'vsmDiamCenSur'; % vsmDiamCenSur, satinV2 
 %%%%%%%%%%%%%%%%%%%%%
 %% Set up environment
@@ -73,8 +73,8 @@ end
 
 % Current dataset/project
 info.workDir      = workDir; if ~exist(info.workDir,'dir'); mkdir(info.workDir); end
-info.workFile     = fullfile(info.workDir,[info.dataSetLabel '_' replace(workScript,'doIt_','') '.mat']);
-info.indexFile    = fullfile(info.workDir,[info.dataSetLabel '_indexFile.mat']);
+info.workFile     = fullfile(info.workDir,[info.dataSetLabel '_' replace(workScript,'doIt_','') '20250630.mat']);
+info.indexFile    = fullfile(info.workDir,[info.dataSetLabel '_indexFile20250630.mat']);
 %% %%%%%%%%%%%%%%%%%%
 
 
@@ -1570,7 +1570,7 @@ for s = 1:length(subList(sesIndList))
         %%% Special case of false movement
         param.baseInd = ismember(fileparts(runSet{S}{rs}.initFiles.fPlumbList(:,1)),fileparts(falseMvmnt(:,2)));
         ind = ismember(fileparts(falseMvmnt(:,2)),fileparts(runSet{S}{rs}.initFiles.fPlumbList(:,1)));
-        param.baseInd(param.baseInd) = str2num(char(falseMvmnt(ind,1)))
+        param.baseInd(param.baseInd) = str2num(char(falseMvmnt(ind,1)));
         
 
         %%% Compute
@@ -1688,7 +1688,7 @@ for s = 1:length(subList(sesIndList))
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-
+return
 
 forceThis   = 0;
 verboseThis = 0;
@@ -1710,11 +1710,10 @@ for S = 1:length(runSet)
         disp('------------------')
         disp('------------------')
         disp('------------------')
-        % runSet{S}{A}
+
+        % if ~contains(runSet{S}{A}.label,'acq-vfMRIpc'); continue; end
         
         QArun(runSet{S}{A}.finalFiles,runSet{S}{A}.fMasks.fMask,runSet{S}{A}.dbDirBidsDeriv,forceThis,verboseThis);
-        % keyboard
-        % close all
     end
 end
 
@@ -1970,7 +1969,7 @@ load(info.workFile,'rCond','runSet','subList','sesList','acqSet','QA','volAnat')
 end
 
 
-return
+
 
 
 if force || ~exist(info.indexFile,'file')
@@ -2019,6 +2018,13 @@ end
 
 
 return
+
+
+
+
+
+
+
 
 
 
