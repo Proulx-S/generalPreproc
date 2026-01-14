@@ -43,12 +43,14 @@ octave-workspace
 **/*.err
 **/*.BRIK
 **/*.HEAD
+**/*.1D
 
 # Nifti files
 **/*.nii
 **/*.nii.gz
 **/*.json
 **/*.jsn
+
 
 # Additional large files that can slow indexing
 **/*.zip
@@ -113,5 +115,5 @@ octave-workspace
 
 # Cursor
 *.cursorignore
-*.code-workspace
+**/*.code-workspace
 test/*

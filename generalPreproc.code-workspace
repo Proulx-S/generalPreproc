@@ -13,14 +13,17 @@
 			"path": "../../tools/vasomoTools"
 		},
 		{
-			"path": "../../../../local/users/Proulx-S/db"
-		},
-		{
-			"path": "../../../../scratch/users/Proulx-S/doIt_generalPreproc/vsmDiamCenSur"
+			"path": "../../../../scratch/users/Proulx-S/tools/bassWrap-reg"
 		}
 	],
 	"settings": {
 		"MATLAB.startDebuggerAutomatically": true,
-		"MATLAB.telemetry": false
+		"MATLAB.telemetry": false,
+		"MATLAB.maxFileSizeForAnalysis": 0,
+		"problems.decorations.enabled": false,
+		"problems.showCurrentInStatus": false,
+		"files.watcherExclude": {
+			"**/*.m": true
+		}
 	}
 }
