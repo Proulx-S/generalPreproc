@@ -1543,13 +1543,13 @@ return
 load tmp
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Test motion correction
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Test motion 2dImReg correction
 %%%%%%%%%%%%%%%%%%%%%%%%%
 % for s = 14;%15; %length(subList(sesIndList))
 s = 14;
 rs = 3;
-    S = sesIndList(s);
+S = sesIndList(s);
     % for rs = 1:length(runSet{S})
         % if isempty(runSet{S}{rs}.fList); continue; end
         acqLabel = strsplit(runSet{S}{rs}.label,'_'); acqLabel = replace(acqLabel(contains(acqLabel,'acq-')),'acq-','');
@@ -1575,104 +1575,6 @@ rs = 3;
         copyfile(runSet{S}{rs}.initFiles.fEstimList{param.baseInd},fRun0);
         mat0 = xCorr(fRun0,fMask);
         mat0(diag(true(size(mat0,1),1))) = nan;
-
-        mri = MRIread(fRun0);
-        mri.vol = mri.vol(:,:,:,1);
-        % mriMask = MRIread(fMask);
-        % mri.vol = mri.vol.*(-(mriMask.vol-1));
-        fBase = fullfile(outDir,'base0.nii.gz');
-        MRIwrite(mri,fBase);
-
-
-        fRunOut_allin = fullfile(outDir,'run1_allin');
-        afni_3dAllineate(fRun0,fBase,fMask,fRunOut_allin,param.spSmFac);
-
-        matAllin = xCorr([fRunOut_allin '.nii.gz'],fMask);
-        matAllin(diag(true(size(matAllin,1),1))) = nan;
-        paramAllin = readmatrix([fRunOut_allin '.param.1D'],'FileType','text');
-        paramAllin = paramAllin(:,[1 3 6]);
-
-
-        fRunOut_ImReg = fullfile(outDir,'run1_imreg');
-        afni_2dImReg(fRun0,fBase,fMask,fRunOut_ImReg,param.spSmFac);
-
-        matImReg = xCorr([fRunOut_ImReg '.nii.gz'],fMask);
-        matImReg(diag(true(size(matImReg,1),1))) = nan;
-        paramImRegX   = readmatrix([fRunOut_ImReg '.dx'],'FileType','text');
-        paramImRegY   = readmatrix([fRunOut_ImReg '.dy'],'FileType','text');
-        paramImRegPSI = readmatrix([fRunOut_ImReg '.psi'],'FileType','text');
-        paramImReg = cat(2,-paramImRegX(:,2),-paramImRegY(:,2),paramImRegPSI(:,2));
-
-
-        mri = MRIread([fRunOut_ImReg '.nii.gz']);
-        mri.vol = mean(mri.vol,4);
-        mri.vol = mri.vol.*(-(mriMask.vol-1));
-        fBase = fullfile(outDir,'base1.nii.gz');
-        MRIwrite(mri,fBase);
-
-
-        fRunOut_allin = fullfile(outDir,'run2_allin');
-        afni_3dAllineate(fRun0,fBase,fMask,fRunOut_allin,param.spSmFac);
-
-        matAllin2 = xCorr([fRunOut_allin '.nii.gz'],fMask);
-        matAllin2(diag(true(size(matAllin2,1),1))) = nan;
-        paramAllin2 = readmatrix([fRunOut_allin '.param.1D'],'FileType','text');
-        paramAllin2 = paramAllin2(:,[1 3 6]);
-
-
-        fRunOut_ImReg = fullfile(outDir,'run2_imreg');
-        afni_2dImReg(fRun0,fBase,fMask,fRunOut_ImReg,param.spSmFac);
-
-        matImReg2 = xCorr([fRunOut_ImReg '.nii.gz'],fMask);
-        matImReg2(diag(true(size(matImReg2,1),1))) = nan;
-        paramImRegX2   = readmatrix([fRunOut_ImReg '.dx'],'FileType','text');
-        paramImRegY2   = readmatrix([fRunOut_ImReg '.dy'],'FileType','text');
-        paramImRegPSI2 = readmatrix([fRunOut_ImReg '.psi'],'FileType','text');
-        paramImReg2 = cat(2,-paramImRegX2(:,2),-paramImRegY2(:,2),paramImRegPSI2(:,2));
-
-
-
-
-        figure('Menu','none','ToolBar','none');
-        plot(mean(matAllin.^2,2,'omitnan')); hold on
-        plot(mean(matImReg.^2,2,'omitnan'));
-        plot(mean(mat0.^2,2,'omitnan'));
-        plot(mean(matAllin2.^2,2,'omitnan'));
-        plot(mean(matImReg2.^2,2,'omitnan'));
-        legend('allineate','imreg','original','allineate2','imreg2');
-        ylabel('rho^2');
-        xlabel('frame index');
-
-        figure('Menu','none','ToolBar','none');
-        h1 = plot(paramAllin(:,1)); hold on
-        h2 = plot(paramImReg(:,1));
-        h3 = plot(paramAllin2(:,1),'--','Color',h1.Color);
-        h4 = plot(paramImReg2(:,1),'--','Color',h2.Color);
-        legend([h1 h2 h3 h4],'allineate','imreg','allineate2','imreg2');
-        ylabel('X translation (mm)');
-        xlabel('frame index');
-
-        figure('Menu','none','ToolBar','none');
-        h1 = plot(paramAllin(:,2)); hold on
-        h2 = plot(paramImReg(:,2));
-        h3 = plot(paramAllin2(:,2),'--','Color',h1.Color);
-        h4 = plot(paramImReg2(:,2),'--','Color',h2.Color);
-        legend([h1 h2 h3 h4],'allineate','imreg','allineate2','imreg2');
-        ylabel('Y translation (mm)');
-        xlabel('frame index');
-
-        figure('Menu','none','ToolBar','none');
-        h1 = plot(paramAllin(:,3)); hold on
-        h2 = plot(paramImReg(:,3));
-        h3 = plot(paramAllin2(:,3),'--','Color',h1.Color);
-        h4 = plot(paramImReg2(:,3),'--','Color',h2.Color);
-        legend([h1 h2 h3 h4],'allineate','imreg','allineate2','imreg2');
-        ylabel('Rotation (deg)');
-        xlabel('frame index');
-
-
-        fRun0
-
 
 
 
@@ -1715,7 +1617,9 @@ rs = 3;
 
     % end
 % end
-%% %%%%%%%%%%%%%%%%%%%%%%
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% On some metric 2dImReg might be better than 3dAllineate, but not on others...
+% Need to double-check using the same interpolation for both
 
 
 
